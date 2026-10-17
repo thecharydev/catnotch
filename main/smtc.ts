@@ -1,5 +1,5 @@
 
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, nativeImage } from 'electron'
 import path from 'path'
 import { Worker } from 'worker_threads'
 
@@ -31,6 +31,24 @@ const pending = new Map<number, (message: WorkerMessage) => void>()
 
 const PLAYBACK_STATUS_PLAYING = 4
 
+/** Album art is never shown larger than this, so bigger art is shrunk to it,
+ *  once per track: players can hand over a 4K cover, which took ~140ms to
+ *  decode every time a card holding it appeared, stalling the notch's spring. */
+const ART = 256
+let art: { from: string; to: string } | null = null
+const smallArt = (url: string | null) => {
+  if (!url) return null
+  if (art?.from === url) return art.to
+  const image = nativeImage.createFromDataURL(url)
+  const { width, height } = image.getSize()
+  const to =
+    Math.min(width, height) <= ART
+      ? url
+      : `data:image/jpeg;base64,${(width > height ? image.resize({ height: ART }) : image.resize({ width: ART })).toJPEG(88).toString('base64')}`
+  art = { from: url, to }
+  return to
+}
+
 const toNowPlaying = (session: any): NowPlaying | null => {
   if (!session) return null
   return {
@@ -41,7 +59,7 @@ const toNowPlaying = (session: any): NowPlaying | null => {
     isPlaying: session.playback?.playbackStatus === PLAYBACK_STATUS_PLAYING,
     position: session.timeline?.position ?? 0,
     duration: session.timeline?.duration ?? 0,
-    thumbnailUrl: session.media?.thumbnailUrl ?? null,
+    thumbnailUrl: smallArt(session.media?.thumbnailUrl ?? null),
   }
 }
 

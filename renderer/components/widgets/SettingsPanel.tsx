@@ -85,7 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showStatus: false,
   ambientVideo: true,
   albumTint: true,
-  startOnBoot: false,
+  startOnBoot: true,
   notchStyle: 'black',
   dockSide: 'bottom',
   hiddenViews: [],

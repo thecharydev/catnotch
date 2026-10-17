@@ -75,8 +75,6 @@ interface NotchChassisProps {
   className?: string
   /** Material / theme appearance of the notch shell. */
   notchStyle?: NotchStyle
-  /** Dominant wallpaper or ambient background color as "r, g, b". */
-  bgTint?: string
 }
 
 /** The little inverted corners where the notch meets the screen's edge, and
@@ -148,7 +146,6 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   dockScale = 1,
   className = '',
   notchStyle = 'black',
-  bgTint = '255, 255, 255',
 }) => {
   const [isHovered, setIsHovered] = useState(false)
 
@@ -318,17 +315,10 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
     <motion.div
       ref={shellRef}
       onMouseEnter={onEnter}
-      onDragEnter={(event) => {
-        setHover(true)
-        // A file on its way in: stay open to take it, and after, until unlocked.
-        if (Array.from(event.dataTransfer.types).includes('Files')) setIsPinned(true)
-      }}
-      // A drag never sends mouseleave, so hover is cleared when it leaves or drops;
-      // the lock is what keeps the notch open after that.
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHover(false)
-      }}
-      onDrop={() => setHover(false)}
+      // A drag opens it like a hover, without locking it. Leaving is left to the
+      // pointer watch below, which follows a drag too: dragleave fires on every
+      // child the drag crosses, so closing on it made the notch flicker.
+      onDragEnter={onEnter}
       initial={false}
       animate={{
         width: isOpen ? expandedWidth : 240,
@@ -384,12 +374,24 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
         <AnimatePresence>
           {isOpen && expandedContent && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, filter: 'blur(6px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.95, filter: 'blur(6px)' }}
+              // No blur: a filter repaints the whole content every frame and stuttered.
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ ...spring, opacity: { duration: 0.15 } }}
-              className="flex-1 min-h-0"
-              style={{ padding: `${PAD_TOP}px ${PAD}px ${PAD}px`, willChange: 'opacity, transform, filter' }}
+              // Laid out once at the open size, centred, and only uncovered as
+              // the shell springs around it. Sized by the shell instead, it was
+              // laid out and repainted on every frame of the spring.
+              className="absolute"
+              style={{
+                top: BAR_OPEN,
+                left: '50%',
+                marginLeft: -expandedWidth / 2,
+                width: expandedWidth,
+                height: expandedHeight - BAR_OPEN,
+                padding: `${PAD_TOP}px ${PAD}px ${PAD}px`,
+                willChange: 'opacity, transform',
+              }}
             >
               {expandedContent}
             </motion.div>

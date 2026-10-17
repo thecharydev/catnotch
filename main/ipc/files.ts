@@ -35,7 +35,6 @@ const iconFor = async (file: string) => {
 /** Windows' own thumbnail for a file, as Explorer shows it. Null where there is
  *  none (most documents and folders fall back to their icon). */
 const IMAGES = new Set(['.png', '.jpg', '.jpeg', '.bmp', '.gif', '.ico', '.webp'])
-let shellThumbWarned = false
 
 const thumbFor = async (file: string) => {
   // Pictures: load and shrink the picture itself — no dependence on the shell.
@@ -50,11 +49,8 @@ const thumbFor = async (file: string) => {
   try {
     const image = await nativeImage.createThumbnailFromPath(file, { width: 128, height: 128 })
     return image.isEmpty() ? null : image
-  } catch (error) {
-    if (!shellThumbWarned) {
-      shellThumbWarned = true
-      console.warn('[files] no shell thumbnail:', (error as Error).message)
-    }
+  } catch {
+    // Expected for most files: Windows has no cached thumbnail, so the icon stands in.
     return null
   }
 }

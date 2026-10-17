@@ -28,7 +28,6 @@ import { onStoreChange } from '../lib/store'
 import { usePhoto } from '../hooks/usePhoto'
 import { useNowPlaying } from '../hooks/useNowPlaying'
 import { useDominantColor } from '../hooks/useDominantColor'
-import { useWallpaperColor } from '../hooks/useWallpaperColor'
 import { useTimer } from '../hooks/useTimer'
 import { useTasks } from '../hooks/useTasks'
 import { refreshAiLimits, useAiLimits } from '../hooks/useAiLimits'
@@ -73,7 +72,6 @@ function useArrivals(names: string[], announce: (name: string) => void) {
 export default function HomePage() {
   const nowPlaying = useNowPlaying()
   const albumTint = useDominantColor(nowPlaying?.thumbnailUrl)
-  const wallpaperColor = useWallpaperColor()
   const timer = useTimer()
   const tasks = useTasks()
   const reminders = useReminders()
@@ -451,7 +449,6 @@ export default function HomePage() {
         <div className="pointer-events-auto">
           <NotchChassis
             notchStyle={settings.notchStyle}
-            bgTint={wallpaperColor}
             ambient={(isOpen) => (
               // Only behind the glance, and only when the music it belongs to is shown.
               <AmbientVideo
