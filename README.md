@@ -55,6 +55,27 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 
 **Requires** Windows 10 or 11.
 
+## Install on macOS
+
+Requires macOS 13 or newer. On a MacBook with a notch, DeskNotch wraps the real notch. On any other screen it shows the same pill as Windows.
+
+**With Homebrew (recommended):**
+
+```bash
+brew install --cask <owner>/desknotch/desknotch
+```
+
+**Or by hand:** download `DeskNotch-<version>-universal.dmg` from [**Releases**](https://github.com/yashsrivasta7a/deskNotch/releases) and drag DeskNotch to Applications. The build is not notarized (that needs a paid Apple account), so the first open is blocked. Open **System Settings, Privacy and Security**, scroll down and click **Open Anyway**. The Homebrew cask clears that block for you.
+
+Update with `brew upgrade --cask desknotch`, or download the new DMG. DeskNotch never installs updates by itself on macOS; Settings tells you when a newer version is out.
+
+**Permissions**, each asked only when its feature needs it:
+- **Location**: to show the Wi-Fi network name. Say no and you get a plain "Wi-Fi" moment.
+- **Screen Recording**: only when you turn on Glass. Say no and the style stays Default.
+- **Keychain**: only after you agree to AI usage, so DeskNotch can read the Claude Code sign in.
+
+macOS ties these approvals to the app's signature, which changes with every build. After an update you may be asked again.
+
 ## Build from source
 
 Requires Node.js 20+.
@@ -90,6 +111,13 @@ Everything stays on your PC. Media, microphone and camera state, Wi-Fi, Bluetoot
 - **Glass** hides the notch from screenshots and screen sharing while it is on; that is how Windows lets an app capture what is behind it.
 - **Screenshots** are caught when Snipping Tool saves them, which is its default.
 - **AI usage** appears only if you use Claude Code or Codex on the same PC.
+
+### macOS differences
+
+- The microphone and camera moments say "Microphone" or "Camera" but not which app, because macOS only tells us which device is running.
+- Screen time (ScreenWise) is Windows only, so that tile is hidden.
+- Recent files, most used apps and screenshot catching rely on Spotlight. If Spotlight indexing is switched off, they stay empty.
+- Now playing uses a private Apple interface that Apple can change in a future macOS release.
 
 ## Feedback
 

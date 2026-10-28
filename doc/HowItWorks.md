@@ -686,3 +686,34 @@ _Definitions for every term used in this file: Electron, IPC, SMTC, AUMID, UserA
 | **Click-through** | A window that lets mouse clicks pass to whatever is underneath it. |
 | **Hit test** | Checking whether the mouse is over the notch, to decide who gets the click. |
 | **Mermaid** | A text format for diagrams, used throughout this file. |
+
+
+## 10. macOS: what replaces each Windows piece
+
+DeskNotch runs on macOS from the same repo. The page (renderer) and the IPC channel names are shared. Each place in `main/` that talked to Windows now checks `process.platform` and calls a macOS twin in `main/mac/`. The Windows code stays where it was, and no macOS module loads on Windows.
+
+> **In plain words:** the screen stays the same. Behind it, every Windows trick is swapped for the Mac way of asking the same question.
+
+| Feature | Windows | macOS |
+|---|---|---|
+| Notch window | `toolbar` window | `panel` window, no Dock icon (`app.dock.hide()` and `LSUIElement`), visible over full screen Spaces |
+| Notch size | fixed pill | the real cutout size, from the Swift helper |
+| Now playing | `windows-smtc-monitor` | the vendored `mediaremote-adapter`, run under Apple's `/usr/bin/perl` |
+| Play, pause, next | media keys through PowerShell | the adapter's `send` command |
+| Recent files | Recent folder shortcuts | Spotlight (`mdfind`, `mdls`) |
+| Screenshots | `Pictures\Screenshots` | folder from `com.apple.screencapture`, accepted when Spotlight flags it a screenshot |
+| Fullscreen and browser tuck | PowerShell and `user32` | helper `foreground` events |
+| Mic, camera | ConsentStore registry | CoreAudio and CoreMediaIO, polled by the helper each second |
+| Wi-Fi, Bluetooth | `netsh`, PnP | CoreWLAN, and `system_profiler` every 30 seconds |
+| Most used apps | UserAssist | Spotlight launch counts |
+| GPU and memory | Get-Counter | IOKit `IOAccelerator` and `host_statistics64`, asked from the helper |
+| Claude sign in | credentials file | Keychain item `Claude Code-credentials`, read after consent |
+| Updates | download and install | check only, Settings shows `brew upgrade --cask desknotch` |
+
+**The helper.** `native/mac/` builds `DeskNotchHelper.app` (universal, ad hoc signed). It prints one JSON line when a value changes and reads one JSON line per request on stdin. It exits when its parent does. It is an app bundle because Location permission cannot be asked by a bare command line tool. Build it with `npm run build:helper`.
+
+**Failing safely.** A missing helper, adapter or permission turns off only the feature that needs it. Every child process has an error handler, so nothing crashes the main process.
+
+**Permissions the app may ask for:** Location (Wi-Fi name), Screen Recording (Glass), Keychain (Claude limits). It asks for no Accessibility, Full Disk Access, Bluetooth or Automation permission.
+
+**Releases.** Pushing a version tag runs `.github/workflows/release-mac.yml` on a macOS runner. It attaches the universal DMG, zip and `latest-mac.yml` to the release, then updates the Homebrew cask (template in `packaging/homebrew/desknotch.rb`) when a `HOMEBREW_TAP_TOKEN` secret exists.
