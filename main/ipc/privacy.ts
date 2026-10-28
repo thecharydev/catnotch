@@ -21,6 +21,7 @@
 import { BrowserWindow, ipcMain } from 'electron'
 import { type ChildProcess, spawn } from 'child_process'
 import { nameOf, warmNames } from './apps'
+import { requestLocation, watchHelper } from '../mac/helper'
 
 export interface BluetoothDevice {
   name: string
@@ -134,7 +135,31 @@ const parse = (line: string): PrivacyState | null => {
   }
 }
 
+/** macOS: the helper reports each part of the state on its own; keep the
+ *  latest of each and push the whole. The moment text carries no app name,
+ *  since macOS says which device runs, not which app. */
+let macWatching = false
+const startMac = () => {
+  if (macWatching) return
+  macWatching = true
+  const push = () => {
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('privacy:state', state)
+  }
+  watchHelper('watchStatus', ['mic', 'camera', 'wifi', 'bluetooth'], true, (line) => {
+    if (line.t === 'mic') state = { ...state, mic: line.on, micApps: line.on ? ['Microphone'] : [] }
+    else if (line.t === 'camera') state = { ...state, camera: line.on, cameraApps: line.on ? ['Camera'] : [] }
+    else if (line.t === 'wifi') {
+      // Without Location the name is hidden: still say there is a network.
+      state = { ...state, wifi: line.connected ? { name: line.ssid ?? 'Wi-Fi', signal: line.signal } : null }
+    } else state = { ...state, bluetooth: line.devices.map((d) => ({ name: d.name, battery: d.battery })) }
+    push()
+  })
+  // The Wi-Fi moment is always on, so this is the moment to ask for Location.
+  requestLocation()
+}
+
 const start = () => {
+  if (process.platform === 'darwin') return startMac()
   if (watcher) return
   // The app names are looked up in the Start menu's list; have it ready.
   warmNames()
@@ -177,6 +202,7 @@ export function registerPrivacyIpc() {
 }
 
 export function stopPrivacyIpc() {
+  macWatching = false
   watcher?.kill()
   watcher = null
 }

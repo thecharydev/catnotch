@@ -230,8 +230,8 @@ export default function HomePage() {
 
   // An app taking the microphone or camera: its name, in the dot's colour.
   // Whatever was already in use when the app started is not news either.
-  useArrivals(privacy.micApps, (name) => warm.current && show({ kind: 'mic', name, detail: 'Microphone' }))
-  useArrivals(privacy.cameraApps, (name) => warm.current && show({ kind: 'camera', name, detail: 'Camera' }))
+  useArrivals(privacy.micApps, (name) => warm.current && show({ kind: 'mic', name, detail: name === 'Microphone' ? undefined : 'Microphone' }))
+  useArrivals(privacy.cameraApps, (name) => warm.current && show({ kind: 'camera', name, detail: name === 'Camera' ? undefined : 'Camera' }))
 
   // The battery: unplugging and plugging in each get a moment with the charge,
   // and running low gets one at each step down. A desktop never changes state,

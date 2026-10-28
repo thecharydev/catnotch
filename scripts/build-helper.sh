@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../native/mac"
 APP=build/DeskNotchHelper.app
 rm -rf build && mkdir -p "$APP/Contents/MacOS" build/tmp
 for arch in arm64 x86_64; do
-  swiftc -O -target "$arch-apple-macos13.0" main.swift -o "build/tmp/helper-$arch"
+  swiftc -O -target "$arch-apple-macos13.0" *.swift -o "build/tmp/helper-$arch"
 done
 lipo -create build/tmp/helper-arm64 build/tmp/helper-x86_64 -output "$APP/Contents/MacOS/DeskNotchHelper"
 cp Info.plist "$APP/Contents/Info.plist"

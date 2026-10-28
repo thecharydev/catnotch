@@ -2,7 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
 import { readStore } from './store'
 import { notchWindows } from './display'
-import { watchForeground } from './mac/helper'
+import { watchHelper } from './mac/helper'
 
 let watcherProcess: ChildProcess | null = null
 let lastRawResult = ''
@@ -127,7 +127,9 @@ while ($true) {
 /** macOS: the helper reports the frontmost app; turn it into the same line the
  *  Windows watcher prints, with the display's own bounds. */
 const watchMac = (on: boolean) =>
-  watchForeground(
+  watchHelper(
+    'watchForeground',
+    ['foreground'],
     on,
     (line) => {
       if ('self' in line) return handleFullscreenChange('self')

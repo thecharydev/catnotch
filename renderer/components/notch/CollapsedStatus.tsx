@@ -189,8 +189,8 @@ const Right: React.FC<{
             key={color}
             aria-label={
               color === MIC
-                ? `Microphone in use${privacy.micApps.length ? `: ${privacy.micApps.join(', ')}` : ''}`
-                : `Camera in use${privacy.cameraApps.length ? `: ${privacy.cameraApps.join(', ')}` : ''}`
+                ? `Microphone in use${privacy.micApps.length && privacy.micApps[0] !== 'Microphone' ? `: ${privacy.micApps.join(', ')}` : ''}`
+                : `Camera in use${privacy.cameraApps.length && privacy.cameraApps[0] !== 'Camera' ? `: ${privacy.cameraApps.join(', ')}` : ''}`
             }
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}

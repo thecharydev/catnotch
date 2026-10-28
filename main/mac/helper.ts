@@ -12,10 +12,17 @@ type HelperLine =
   | ({ t: 'notch'; display: number } & Notch)
   | { t: 'foreground'; self: true }
   | { t: 'foreground'; fullscreen: boolean; display: number; bundle: string }
+  | { t: 'mic'; on: boolean }
+  | { t: 'camera'; on: boolean }
+  | { t: 'wifi'; connected: boolean; ssid: string | null; signal: number; location: 'granted' | 'denied' | 'unknown' }
+  | { t: 'bluetooth'; devices: { name: string; connected: boolean; battery: number | null }[] }
 
-/** Listeners for the frontmost app, set by fullscreen.ts. */
-let onForeground: ((line: Extract<HelperLine, { t: 'foreground' }>) => void) | null = null
-let watching = false
+export type HelperEvent<T extends HelperLine['t']> = Extract<HelperLine, { t: T }>
+
+/** One listener per event type, set by the feature that wants it. */
+const listeners = new Map<string, (line: any) => void>()
+/** Watches asked for, replayed to a restarted helper. */
+const watches = new Map<string, boolean>()
 
 const notches = new Map<number, Notch>()
 let child: ChildProcess | null = null
@@ -35,7 +42,7 @@ const notchFor = (window: BrowserWindow | null): Notch | null => {
 }
 
 const handle = (line: HelperLine) => {
-  if (line.t === 'foreground') return onForeground?.(line)
+  if (line.t !== 'notch') return listeners.get(line.t)?.(line)
   notches.set(line.display, { w: line.w, h: line.h })
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send('notch:hardware', notchFor(window))
 }
@@ -47,7 +54,7 @@ const start = () => {
   child = proc
   proc.on('error', () => {})
   proc.stdin?.on('error', () => {})
-  if (watching) send({ cmd: 'watchForeground', on: true })
+  for (const [cmd, on] of watches) send({ cmd, on })
   let buffer = ''
   proc.stdout?.on('data', (chunk: Buffer) => {
     buffer += chunk.toString()
@@ -68,12 +75,15 @@ const start = () => {
 
 const send = (request: object) => child?.stdin?.write(`${JSON.stringify(request)}\n`)
 
-/** Starts or stops the frontmost app watch (which polls while on). */
-export function watchForeground(on: boolean, listener?: typeof onForeground) {
-  watching = on
-  if (listener) onForeground = listener
-  send({ cmd: 'watchForeground', on })
+/** Listens for an event type, and turns its watch (`watchForeground`,
+ *  `watchStatus`) on or off. The helper only polls while a watch is on. */
+export function watchHelper<T extends HelperLine['t']>(cmd: string, types: T[], on: boolean, listener?: (line: HelperEvent<T>) => void) {
+  if (listener) for (const type of types) listeners.set(type, listener as (line: any) => void)
+  watches.set(cmd, on)
+  send({ cmd, on })
 }
+
+export const requestLocation = () => send({ cmd: 'requestLocation' })
 
 export function startHelper() {
   ipcMain.handle('notch:hardware', (event) => notchFor(BrowserWindow.fromWebContents(event.sender)))

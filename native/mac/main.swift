@@ -96,10 +96,53 @@ FileHandle.standardInput.readabilityHandler = { handle in
         input = String(input[input.index(after: newline)...])
         guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
         DispatchQueue.main.async {
-            if object["cmd"] as? String == "watchForeground" { watchForeground(object["on"] as? Bool ?? false) }
+            switch object["cmd"] as? String {
+            case "watchForeground": watchForeground(object["on"] as? Bool ?? false)
+            case "watchStatus": watchStatus(object["on"] as? Bool ?? false)
+            case "requestLocation": location.request()
+            default: break
+            }
         }
     }
 }
+
+// Status: polled, one tick a second (cheap property reads). Bluetooth is slower.
+let location = LocationGate()
+var lastStatus: [String: String] = [:]
+
+func emitIfChanged(_ key: String, _ object: [String: Any]) {
+    let text = String(describing: object.sorted { $0.key < $1.key })
+    if lastStatus[key] == text { return }
+    lastStatus[key] = text
+    emit(object)
+}
+
+func reportStatus() {
+    emitIfChanged("mic", ["t": "mic", "on": micRunning()])
+    emitIfChanged("camera", ["t": "camera", "on": cameraRunning()])
+    emitIfChanged("wifi", wifiState(location.state))
+}
+
+func reportBluetooth() {
+    DispatchQueue.global(qos: .utility).async {
+        let devices = bluetoothDevices()
+        DispatchQueue.main.async { emitIfChanged("bluetooth", ["t": "bluetooth", "devices": devices]) }
+    }
+}
+
+func watchStatus(_ on: Bool) {
+    statusTimers.forEach { $0.invalidate() }
+    statusTimers = []
+    guard on else { return }
+    location.onChange = { reportStatus() }
+    reportStatus()
+    reportBluetooth()
+    statusTimers = [
+        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in reportStatus() },
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in reportBluetooth() },
+    ]
+}
+var statusTimers: [Timer] = []
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
