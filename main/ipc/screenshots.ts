@@ -10,11 +10,16 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import { isScreenCapture, screenshotFolder } from '../mac/spotlight'
 
 const IMAGE = /\.(png|jpe?g)$/i
 
+let macFolder: string | null = null
+
 const folders = () =>
-  [path.join(app.getPath('pictures'), 'Screenshots'), process.env.OneDrive && path.join(process.env.OneDrive, 'Pictures', 'Screenshots')]
+  process.platform === 'darwin'
+    ? macFolder && fs.existsSync(macFolder) ? [macFolder] : []
+    : [path.join(app.getPath('pictures'), 'Screenshots'), process.env.OneDrive && path.join(process.env.OneDrive, 'Pictures', 'Screenshots')]
     .filter((dir): dir is string => Boolean(dir) && fs.existsSync(dir as string))
     .filter((dir, i, all) => all.indexOf(dir) === i)
 
@@ -69,7 +74,8 @@ ipcMain.handle('screenshot:rename', async (_event, file: unknown, name: unknown)
   }
 })
 
-export function startScreenshotWatch() {
+export async function startScreenshotWatch() {
+  if (process.platform === 'darwin') macFolder = await screenshotFolder()
   for (const dir of folders()) {
     try {
       watchers.push(
@@ -81,6 +87,8 @@ export function startScreenshotWatch() {
           // Only new captures: a rename or touch of an old file is not one.
           const born = await fs.promises.stat(file).then((s) => s.birthtimeMs, () => 0)
           if (Date.now() - born > 10_000 || !(await settled(file))) return
+          // macOS: only what Spotlight flags as a screenshot, not any picture saved to the folder.
+          if (process.platform === 'darwin' && !(await isScreenCapture(file))) return
           for (const window of BrowserWindow.getAllWindows()) window.webContents.send('screenshot:new', file)
         }),
       )

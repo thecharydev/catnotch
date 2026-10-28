@@ -6,6 +6,7 @@ import { app, ipcMain, nativeImage, screen, shell, type NativeImage } from 'elec
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { recentPaths } from '../mac/spotlight'
 
 export interface FileItem {
   path: string
@@ -83,6 +84,16 @@ const RECENT = path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData
  * have since moved are left out.
  */
 const recent = async (limit = 12): Promise<FileItem[]> => {
+  if (process.platform === 'darwin') {
+    const items: FileItem[] = []
+    // A few more than asked for: some will have moved since Spotlight saw them.
+    for (const file of await recentPaths(limit * 2)) {
+      if (items.length >= limit) break
+      const item = await describe(file)
+      if (item && !item.isDir) items.push(item)
+    }
+    return items
+  }
   let entries: { lnk: string; at: number }[] = []
   try {
     const names = await fs.promises.readdir(RECENT)
