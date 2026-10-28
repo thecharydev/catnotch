@@ -33,6 +33,74 @@ func reportNotches() {
     for id in lastNotch.keys where !seen.contains(id) { lastNotch[id] = nil }
 }
 
+// Foreground app and whether it fills a display (a full screen Space).
+// Only watched while main asks, since the 300 ms check is not free.
+var lastForeground = ""
+var foregroundTimer: Timer?
+
+func displayBounds(_ id: CGDirectDisplayID) -> CGRect { CGDisplayBounds(id) }
+
+func reportForeground() {
+    guard let front = NSWorkspace.shared.frontmostApplication else { return }
+    if front.processIdentifier == getppid() {
+        if lastForeground != "self" { lastForeground = "self"; emit(["t": "foreground", "self": true]) }
+        return
+    }
+    var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+    var count: UInt32 = 0
+    CGGetActiveDisplayList(16, &ids, &count)
+    let displays = Array(ids.prefix(Int(count)))
+
+    var fullscreen = false
+    var display = CGMainDisplayID()
+    var best = 0.0
+    let windows = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
+    for w in windows where (w[kCGWindowOwnerPID as String] as? Int32) == front.processIdentifier && (w[kCGWindowLayer as String] as? Int) == 0 {
+        guard let dict = w[kCGWindowBounds as String] as? NSDictionary, let rect = CGRect(dictionaryRepresentation: dict) else { continue }
+        for id in displays {
+            let bounds = displayBounds(id)
+            let overlap = bounds.intersection(rect)
+            let area = overlap.isNull ? 0 : Double(overlap.width * overlap.height)
+            if area > best { best = area; display = id }
+            // Covering the whole display, menu bar included, is full screen;
+            // a maximised window stops below the menu bar.
+            if rect.minX <= bounds.minX + 2 && rect.minY <= bounds.minY + 2 && rect.maxX >= bounds.maxX - 2 && rect.maxY >= bounds.maxY - 2 {
+                fullscreen = true; display = id; best = .infinity
+            }
+        }
+    }
+    let bundle = front.bundleIdentifier ?? ""
+    let key = "\(fullscreen)|\(display)|\(bundle)"
+    if key == lastForeground { return }
+    lastForeground = key
+    emit(["t": "foreground", "fullscreen": fullscreen, "display": display, "bundle": bundle])
+}
+
+func watchForeground(_ on: Bool) {
+    foregroundTimer?.invalidate()
+    foregroundTimer = nil
+    lastForeground = ""
+    guard on else { return }
+    reportForeground()
+    foregroundTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in reportForeground() }
+}
+
+// Requests from main: one JSON object per line.
+var input = ""
+FileHandle.standardInput.readabilityHandler = { handle in
+    let data = handle.availableData
+    if data.isEmpty { exit(0) }   // main closed our stdin: it is gone
+    input += String(decoding: data, as: UTF8.self)
+    while let newline = input.firstIndex(of: "\n") {
+        let line = String(input[..<newline])
+        input = String(input[input.index(after: newline)...])
+        guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
+        DispatchQueue.main.async {
+            if object["cmd"] as? String == "watchForeground" { watchForeground(object["on"] as? Bool ?? false) }
+        }
+    }
+}
+
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 

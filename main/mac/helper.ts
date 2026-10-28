@@ -8,7 +8,14 @@ import { existsSync } from 'fs'
 import path from 'path'
 
 type Notch = { w: number; h: number }
-type HelperLine = { t: 'notch'; display: number } & Notch
+type HelperLine =
+  | ({ t: 'notch'; display: number } & Notch)
+  | { t: 'foreground'; self: true }
+  | { t: 'foreground'; fullscreen: boolean; display: number; bundle: string }
+
+/** Listeners for the frontmost app, set by fullscreen.ts. */
+let onForeground: ((line: Extract<HelperLine, { t: 'foreground' }>) => void) | null = null
+let watching = false
 
 const notches = new Map<number, Notch>()
 let child: ChildProcess | null = null
@@ -28,7 +35,7 @@ const notchFor = (window: BrowserWindow | null): Notch | null => {
 }
 
 const handle = (line: HelperLine) => {
-  if (line.t !== 'notch') return
+  if (line.t === 'foreground') return onForeground?.(line)
   notches.set(line.display, { w: line.w, h: line.h })
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send('notch:hardware', notchFor(window))
 }
@@ -36,9 +43,11 @@ const handle = (line: HelperLine) => {
 const start = () => {
   const file = binary()
   if (stopped || !existsSync(file)) return
-  const proc = spawn(file, [], { stdio: ['ignore', 'pipe', 'ignore'] })
+  const proc = spawn(file, [], { stdio: ['pipe', 'pipe', 'ignore'] })
   child = proc
   proc.on('error', () => {})
+  proc.stdin?.on('error', () => {})
+  if (watching) send({ cmd: 'watchForeground', on: true })
   let buffer = ''
   proc.stdout?.on('data', (chunk: Buffer) => {
     buffer += chunk.toString()
@@ -55,6 +64,15 @@ const start = () => {
     // Restart a crash a few times, then leave the feature off.
     if (!stopped && ++crashes <= 3) setTimeout(start, 1000)
   })
+}
+
+const send = (request: object) => child?.stdin?.write(`${JSON.stringify(request)}\n`)
+
+/** Starts or stops the frontmost app watch (which polls while on). */
+export function watchForeground(on: boolean, listener?: typeof onForeground) {
+  watching = on
+  if (listener) onForeground = listener
+  send({ cmd: 'watchForeground', on })
 }
 
 export function startHelper() {

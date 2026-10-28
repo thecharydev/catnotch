@@ -2,6 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
 import { readStore } from './store'
 import { notchWindows } from './display'
+import { watchForeground } from './mac/helper'
 
 let watcherProcess: ChildProcess | null = null
 let lastRawResult = ''
@@ -10,6 +11,11 @@ const tucked = new Map<number, boolean>()
 
 /** Browsers, by process name: their tabs and address bar sit right under the notch. */
 const BROWSERS = new Set(['chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi'])
+/** The same, by macOS bundle id. */
+const MAC_BROWSERS = new Set([
+  'com.apple.Safari', 'com.google.Chrome', 'com.microsoft.edgemac', 'org.mozilla.firefox', 'com.brave.Browser',
+  'company.thebrowser.Browser', 'com.operasoftware.Opera', 'com.vivaldi.Vivaldi',
+])
 
 const SCRIPT = (parentPid: number) => `
 $code = @"
@@ -118,7 +124,21 @@ while ($true) {
 }
 `
 
+/** macOS: the helper reports the frontmost app; turn it into the same line the
+ *  Windows watcher prints, with the display's own bounds. */
+const watchMac = (on: boolean) =>
+  watchForeground(
+    on,
+    (line) => {
+      if ('self' in line) return handleFullscreenChange('self')
+      const display = screen.getAllDisplays().find((d) => d.id === line.display) ?? screen.getPrimaryDisplay()
+      const { x, y, width, height } = display.bounds
+      handleFullscreenChange(`${line.fullscreen ? 1 : 0},${x},${y},${x + width},${y + height},${line.bundle}`)
+    },
+  )
+
 export function startFullscreenWatch() {
+  if (process.platform === 'darwin') return watchMac(true)
   if (process.platform !== 'win32') return
 
   if (watcherProcess) return
@@ -154,6 +174,7 @@ export function startFullscreenWatch() {
 }
 
 export function stopFullscreenWatch() {
+  if (process.platform === 'darwin') return watchMac(false)
   if (watcherProcess) {
     watcherProcess.kill()
     watcherProcess = null
@@ -190,7 +211,7 @@ function handleFullscreenChange(rawResult: string) {
   const settings = (readStore().settings ?? {}) as Record<string, unknown>
   const hideOnFullscreen = settings.hideOnFullscreen !== false
   const tuckForBrowsers = settings.tuckForBrowsers === true
-  const browser = BROWSERS.has(exe.toLowerCase())
+  const browser = BROWSERS.has(exe.toLowerCase()) || MAC_BROWSERS.has(exe)
 
   const displays = screen.getAllDisplays()
   for (const [id, window] of notchWindows()) {
@@ -215,6 +236,6 @@ function handleFullscreenChange(rawResult: string) {
 function restoreWindow(window: BrowserWindow) {
   window.showInactive()
   window.setAlwaysOnTop(true, 'screen-saver')
-  window.setVisibleOnAllWorkspaces(true)
+  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   window.setSkipTaskbar(true)
 }
