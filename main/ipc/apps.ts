@@ -7,6 +7,7 @@
 import { ipcMain, shell } from 'electron'
 import { execFile, spawn } from 'child_process'
 import fs from 'fs'
+import { registerMacAppsIpc } from '../mac/apps'
 
 export interface TopApp {
   id: string
@@ -175,6 +176,7 @@ export const nameOf = async (key: string) => {
 export const warmNames = () => void allApps()
 
 export function registerAppsIpc() {
+  if (process.platform === 'darwin') return registerMacAppsIpc()
   // Pre-warm the app cache in the background, after start-up has settled:
   // two PowerShells (one compiling C#) at launch alongside the others made the
   // first seconds stutter. An earlier ask (the apps bar opened) runs them anyway.
