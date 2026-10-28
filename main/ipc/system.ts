@@ -1,5 +1,5 @@
 /** Readings about the machine itself. */
-import { BrowserWindow, desktopCapturer, ipcMain, screen } from 'electron'
+import { BrowserWindow, desktopCapturer, dialog, ipcMain, screen, shell, systemPreferences } from 'electron'
 import os from 'os'
 import { readStore } from '../store'
 
@@ -43,6 +43,36 @@ export function registerSystemIpc() {
     if (on === true) glassOn.add(window.id)
     else glassOn.delete(window.id)
     applyContentProtection()
+  })
+
+  /**
+   * macOS: Glass captures the screen, which needs Screen Recording. Turning
+   * Glass on explains that first, then asks; the answer is whether it may
+   * run. Elsewhere there is nothing to ask. A denied permission can only be
+   * changed in System Settings, so the dialog offers to open it.
+   */
+  ipcMain.handle('glass:permission', async (): Promise<boolean> => {
+    if (process.platform !== 'darwin') return true
+    if (systemPreferences.getMediaAccessStatus('screen') === 'granted') return true
+    const denied = systemPreferences.getMediaAccessStatus('screen') === 'denied'
+    const { response } = await dialog.showMessageBox({
+      type: 'info',
+      title: 'DeskNotch',
+      message: 'Glass needs Screen Recording',
+      detail:
+        'Glass shows a live blur of what is behind the notch, so macOS asks you to allow Screen Recording. ' +
+        'DeskNotch only looks at the strip behind the notch, and nothing leaves your Mac.' +
+        (denied ? '\n\nIt was turned off before: switch DeskNotch on in System Settings, Privacy and Security, Screen Recording.' : ''),
+      buttons: [denied ? 'Open System Settings' : 'Continue', 'Not now'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    })
+    if (response !== 0) return false
+    if (denied) void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')
+    // Asking for a capture source is what makes macOS show its prompt.
+    else await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } }).catch(() => [])
+    return systemPreferences.getMediaAccessStatus('screen') === 'granted'
   })
 
   /** The capture source for the display the notch is on, for the renderer to stream. */

@@ -338,6 +338,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
   const [displays, setDisplays] = React.useState<DisplayInfo[]>([])
   // The Store build starts with Windows through Windows' own Startup page.
   const [store, setStore] = useState(false)
+  /** Set when Glass was refused (macOS Screen Recording): the style stays Default. */
+  const [glassNote, setGlassNote] = useState(false)
   React.useEffect(() => {
     void window.bridge?.invoke<boolean>('app:is-store').then((s) => setStore(Boolean(s)))
   }, [])
@@ -617,6 +619,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
         <Group>
           <Row
             title="Style"
+            detail={glassNote ? 'Glass needs Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
           >
             <Segmented
               id="style"
@@ -625,7 +628,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
                 { id: 'glass', label: 'Glass' },
               ] as const}
               value={settings.notchStyle}
-              onChange={(v) => set('notchStyle', v)}
+              onChange={async (v) => {
+                setGlassNote(false)
+                // Glass can need a permission first; without it, the style stays Default.
+                if (v === 'glass' && (await window.bridge?.invoke<boolean>('glass:permission')) === false) return setGlassNote(true)
+                set('notchStyle', v)
+              }}
             />
           </Row>
           <Row title="Music glow">
