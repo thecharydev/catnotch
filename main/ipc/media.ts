@@ -7,6 +7,7 @@
  */
 import { ipcMain } from 'electron'
 import { type ChildProcess, execFile, spawn } from 'child_process'
+import { focusPlayer, sendTransport } from '../mac/nowplaying'
 
 const MEDIA_KEYS = { 'play-pause': 0xb3, next: 0xb0, previous: 0xb1 } as const
 type MediaKey = keyof typeof MEDIA_KEYS
@@ -46,6 +47,7 @@ while (($line = [Console]::In.ReadLine()) -ne $null) {
       ],
       { windowsHide: true, stdio: ['pipe', 'ignore', 'ignore'] },
     )
+    keyServer.on('error', () => {})
     keyServer.on('exit', () => {
       keyServer = null
     })
@@ -67,11 +69,14 @@ if ($p) { [W]::ShowWindow($p.MainWindowHandle, 3) | Out-Null; [W]::SetForeground
 
 export function registerMediaIpc() {
   ipcMain.handle('media:key', (_event, key: MediaKey) => {
-    if (key in MEDIA_KEYS) pressKey(MEDIA_KEYS[key])
+    if (!(key in MEDIA_KEYS)) return
+    if (process.platform === 'darwin') sendTransport(key)
+    else pressKey(MEDIA_KEYS[key])
   })
 
   ipcMain.handle('media:focus', async (_event, sourceAppId: string) => {
     if (typeof sourceAppId !== 'string' || !/^[\w.!-]+$/.test(sourceAppId)) return
+    if (process.platform === 'darwin') return focusPlayer(sourceAppId)
     if (sourceAppId.includes('!')) {
       // A Store app (Spotify from the Store, say): the shell activates it by its AUMID.
       spawn('explorer.exe', [`shell:AppsFolder\\${sourceAppId}`], { detached: true, stdio: 'ignore' }).unref()

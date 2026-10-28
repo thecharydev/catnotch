@@ -2,6 +2,8 @@ import path from 'path'
 import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import serve from 'electron-serve'
 import { startSmtc, stopSmtc } from './smtc'
+import { startHelper, stopHelper } from './mac/helper'
+import { startMacNowPlaying, stopMacNowPlaying } from './mac/nowplaying'
 import { registerIpc } from './ipc'
 import { stopMediaIpc } from './ipc/media'
 import { stopPrivacyIpc } from './ipc/privacy'
@@ -38,9 +40,10 @@ const createNotchWindow = (bounds: Rect) => {
     movable: false,
     fullscreenable: false,
     skipTaskbar: true,
-    // A tool window: Windows never lists these on the taskbar or in Alt+Tab,
-    // even after it takes focus (plain skipTaskbar can be lost then).
-    type: 'toolbar',
+    // Windows: a tool window never lists on the taskbar or in Alt+Tab, even
+    // after it takes focus (plain skipTaskbar can be lost then). macOS: a
+    // panel floats over other apps without activating DeskNotch.
+    type: process.platform === 'darwin' ? 'panel' : 'toolbar',
     alwaysOnTop: true,
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.js'),
@@ -48,7 +51,8 @@ const createNotchWindow = (bounds: Rect) => {
   })
 
   window.setAlwaysOnTop(true, 'screen-saver')
-  window.setVisibleOnAllWorkspaces(true)
+  // visibleOnFullScreen: stay over a full screen Space too (macOS only).
+  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
   window.setIgnoreMouseEvents(true, { forward: true })
   // A notch made later (a display plugged in) honours Hide in screenshots too.
@@ -111,6 +115,9 @@ const createNotchWindow = (bounds: Rect) => {
 app.whenReady().then(() => {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.devezio.desknotch')
+  } else if (process.platform === 'darwin') {
+    // No Dock icon or app switcher entry; the packaged app also sets LSUIElement.
+    app.dock?.hide()
   }
 
   ipcMain.on('notch:bounds', (event, bounds: Rect[] | Rect) => {
@@ -140,14 +147,26 @@ app.whenReady().then(() => {
   registerIpc()
   startUpdater()
   startSmtc()
+  if (process.platform === 'darwin') {
+    startHelper()
+    startMacNowPlaying()
+  }
   startScreenshotWatch()
   setupNotchWindows(createNotchWindow, STRIP_HEIGHT)
   // Its PowerShell compiles C# on start; let the notch paint first.
   setTimeout(checkAndApplyFullscreenState, 2000)
 })
 
+// Quit from anywhere (Cmd+Q, the app's own Quit) stops the macOS children too.
+app.on('before-quit', () => {
+  stopHelper()
+  stopMacNowPlaying()
+})
+
 app.on('window-all-closed', () => {
   stopSmtc()
+  stopHelper()
+  stopMacNowPlaying()
   stopMediaIpc()
   stopPrivacyIpc()
   stopUsageIpc()

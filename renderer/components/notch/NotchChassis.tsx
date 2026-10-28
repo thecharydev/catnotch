@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Lock, LockOpen, Power } from 'lucide-react'
+import { useHardwareNotch } from '../../hooks/useHardwareNotch'
 import { DockSideContext, RailButton, railLabel, type DockSide } from './ViewSwitcher'
 
 /** The top bar: the notch itself when closed. Open, the controls live on the
@@ -147,6 +148,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   className = '',
   notchStyle = 'black',
 }) => {
+  const hardware = useHardwareNotch()
   const [isHovered, setIsHovered] = useState(false)
 
 
@@ -321,8 +323,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       onDragEnter={onEnter}
       initial={false}
       animate={{
-        width: isOpen ? expandedWidth : 240,
-        height: isOpen ? expandedHeight : sliver ? BAR_TUCKED : BAR_CLOSED,
+        width: isOpen ? expandedWidth : hardware?.w ?? 240,
+        height: isOpen ? expandedHeight : sliver ? BAR_TUCKED : hardware?.h ?? BAR_CLOSED,
       }}
       transition={spring}
       // The dock reads these: its buttons and icons grow, its label text does not.
@@ -362,7 +364,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
           // No click-to-lock here: clicking the bar locked the notch open by
           // surprise. Locking is only the lock button on the dock.
           initial={false}
-          animate={{ height: isOpen ? BAR_OPEN : BAR_CLOSED }}
+          animate={{ height: isOpen ? BAR_OPEN : hardware?.h ?? BAR_CLOSED }}
           transition={spring}
           className="shrink-0 flex items-center justify-between px-5 relative"
         >

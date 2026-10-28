@@ -58,6 +58,8 @@ const start = () => {
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'ignore'],
   })
+  // No PowerShell (macOS): GPU just stays at 0 instead of crashing main.
+  sampler.on('error', () => {})
   let buffer = ''
   sampler.stdout?.on('data', (chunk: Buffer) => {
     buffer += chunk.toString()

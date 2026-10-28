@@ -45,3 +45,23 @@ appx:
   # Declares a Windows startup task: Store apps cannot register themselves
   # the way the installer does. Users switch it in Settings → Apps → Startup.
   addAutoLaunchExtension: true
+# macOS: no Dock icon or app switcher entry (see main/main.ts, app.dock.hide).
+mac:
+  # Unsigned on purpose (no Apple account): ad hoc signed, so Homebrew's cask
+  # or "Open Anyway" is how people open it. See docs/specs/0001-macos-port.
+  target:
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
+  icon: resources/icon.icns
+  category: public.app-category.utilities
+  minimumSystemVersion: "13.0"
+  extraResources:
+    - from: native/mac/build/DeskNotchHelper.app
+      to: DeskNotchHelper.app
+    - from: native/mac/build/mediaremote
+      to: mediaremote
+  identity: null
+  extendInfo:
+    LSUIElement: true

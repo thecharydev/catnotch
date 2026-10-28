@@ -142,6 +142,8 @@ const start = () => {
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'ignore'],
   })
+  // No PowerShell (macOS): no dots instead of crashing main.
+  watcher.on('error', () => {})
   let buffer = ''
   let latest = 0
   watcher.stdout?.on('data', (chunk: Buffer) => {

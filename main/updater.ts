@@ -54,7 +54,8 @@ export function startUpdater() {
 
   if (!app.isPackaged || store) return
   const version = app.getVersion()
-  autoUpdater.autoDownload = true
+  // macOS builds are unsigned, so an update cannot install itself there.
+  autoUpdater.autoDownload = process.platform !== 'darwin'
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.on('checking-for-update', () => publish({ status: 'checking', version }))
   autoUpdater.on('update-not-available', () => publish({ status: 'none', version }))

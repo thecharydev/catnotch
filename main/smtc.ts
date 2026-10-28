@@ -36,7 +36,7 @@ const PLAYBACK_STATUS_PLAYING = 4
  *  decode every time a card holding it appeared, stalling the notch's spring. */
 const ART = 256
 let art: { from: string; to: string } | null = null
-const smallArt = (url: string | null) => {
+export const smallArt = (url: string | null) => {
   if (!url) return null
   if (art?.from === url) return art.to
   const image = nativeImage.createFromDataURL(url)
@@ -63,6 +63,16 @@ const toNowPlaying = (session: any): NowPlaying | null => {
   }
 }
 
+/** Sets what is playing and tells every window. */
+export const setNowPlaying = (next: NowPlaying | null) => {
+  current = next && { ...next, thumbnailUrl: smallArt(next.thumbnailUrl) }
+  push()
+}
+
+const push = () => {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send('smtc:now-playing', current)
+}
+
 const request = (type: string, args?: unknown[]): Promise<unknown> => {
   if (!worker) return Promise.resolve(null)
   const requestId = nextRequestId++
@@ -76,13 +86,13 @@ const request = (type: string, args?: unknown[]): Promise<unknown> => {
 }
 
 export function startSmtc() {
+  // The renderer asks once on mount; after that it listens.
+  ipcMain.handle('smtc:get', () => current)
+  // macOS: main/mac/nowplaying.ts feeds setNowPlaying instead.
+  if (process.platform !== 'win32') return
   // Resolves to app/ at runtime, where the worker is copied alongside main.js.
   // import.meta.dirname rather than __dirname: the bundle is an ES module.
   worker = new Worker(path.join(import.meta.dirname, 'smtc-worker.js'))
-
-  const push = () => {
-    for (const window of BrowserWindow.getAllWindows()) window.webContents.send('smtc:now-playing', current)
-  }
 
   const refresh = async () => {
     try {
@@ -115,9 +125,6 @@ export function startSmtc() {
     if (code !== 0) console.error(`[smtc] worker exited with code ${code}`)
     worker = null
   })
-
-  // The renderer asks once on mount; after that it listens.
-  ipcMain.handle('smtc:get', () => current)
 
   void refresh()
 }
