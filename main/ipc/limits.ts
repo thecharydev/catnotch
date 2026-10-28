@@ -7,6 +7,7 @@
  * relies on. The tool refreshes it next time it runs; the file is re-read each poll.
  */
 import { app, dialog, ipcMain } from 'electron'
+import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -100,11 +101,29 @@ async function fetchLimits(
   }
 }
 
+/** Claude Code's sign-in. On macOS it lives in the Keychain, where reading it
+ *  makes macOS show its own "allow" prompt the first time. Only called after
+ *  the consent dialog. An empty Keychain falls back to the credentials file. */
+const claudeOauth = async () => {
+  if (process.platform === 'darwin') {
+    const secret = await new Promise<string>((resolve) =>
+      execFile('security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], (_error, stdout) => resolve(stdout ?? '')),
+    )
+    try {
+      const oauth = JSON.parse(secret).claudeAiOauth
+      if (oauth) return oauth
+    } catch {
+      // Empty or not JSON: not signed in through the Keychain.
+    }
+  }
+  return (await readJson('.claude/.credentials.json')).claudeAiOauth
+}
+
 const claude = (force?: boolean) =>
   cached('Claude', () => fetchLimits(
     'Claude',
     async () => {
-      const oauth = (await readJson('.claude/.credentials.json')).claudeAiOauth
+      const oauth = await claudeOauth()
       if (!oauth?.accessToken) return null
       return fetch('https://api.anthropic.com/api/oauth/usage', {
         headers: {
