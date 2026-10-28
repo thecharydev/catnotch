@@ -74,6 +74,12 @@ export interface ScreenTime {
 }
 
 async function readScreenTime(): Promise<ScreenTime> {
+  // ScreenWise is Windows only: on macOS the tile stays hidden.
+  if (process.platform !== 'darwin') return readWindowsScreenTime()
+  return { installed: false, ms: null }
+}
+
+async function readWindowsScreenTime(): Promise<ScreenTime> {
   const file = dbFile()
   if (!file || !(await isInstalled())) return { installed: false, ms: null }
   let db: import('node:sqlite').DatabaseSync | undefined

@@ -263,9 +263,11 @@ interface SettingsPanelProps {
   desktimeInstalled: boolean
 }
 
+const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+
 /** The updater's state, as main/updater.ts reports it. */
 type UpdateState = {
-  status: 'dev' | 'store' | 'idle' | 'checking' | 'none' | 'error' | 'downloading' | 'ready'
+  status: 'dev' | 'store' | 'idle' | 'checking' | 'none' | 'error' | 'downloading' | 'ready' | 'available'
   version: string
   next?: string
   percent?: number
@@ -289,11 +291,12 @@ const UpdateRow: React.FC = () => {
     downloading: `Downloading ${update.next ?? ''} · ${update.percent ?? 0}%`,
     // It installs itself once the PC is left alone for a minute; nothing to press.
     ready: `Version ${update.next} installs when you step away`,
+    available: `Version ${update.next} is out. Run: brew upgrade --cask desknotch`,
   }[update.status]
   const busy = update.status === 'checking' || update.status === 'downloading' || update.status === 'dev'
   return (
     <Row title={`Version ${update.version}`} detail={detail}>
-      {update.status !== 'store' && update.status !== 'ready' && (
+      {update.status !== 'store' && update.status !== 'ready' && update.status !== 'available' && (
         <button
           type="button"
           disabled={busy}
@@ -665,8 +668,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               </button>
             </Row>
           ) : (
-            <Row title="Start with Windows">
-              <Switch label="Start with Windows" on={settings.startOnBoot} onChange={(v) => set('startOnBoot', v)} />
+            <Row title={isMac ? 'Start at login' : 'Start with Windows'}>
+              <Switch label={isMac ? 'Start at login' : 'Start with Windows'} on={settings.startOnBoot} onChange={(v) => set('startOnBoot', v)} />
             </Row>
           )}
           <Row title="Hide in fullscreen" detail="Videos, games and F11">

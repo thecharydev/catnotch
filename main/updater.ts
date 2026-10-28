@@ -27,6 +27,8 @@ export type UpdateState =
   | { status: 'dev' | 'store' | 'idle' | 'checking' | 'none' | 'error'; version: string }
   | { status: 'downloading'; version: string; next: string; percent: number }
   | { status: 'ready'; version: string; next: string }
+  /** macOS: a newer release exists; it cannot install itself, so Settings shows the brew line. */
+  | { status: 'available'; version: string; next: string }
 
 /** How often a running app looks again. */
 const EVERY = 6 * 60 * 60 * 1000
@@ -56,10 +58,12 @@ export function startUpdater() {
   const version = app.getVersion()
   // macOS builds are unsigned, so an update cannot install itself there.
   autoUpdater.autoDownload = process.platform !== 'darwin'
-  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.autoInstallOnAppQuit = process.platform !== 'darwin'
   autoUpdater.on('checking-for-update', () => publish({ status: 'checking', version }))
   autoUpdater.on('update-not-available', () => publish({ status: 'none', version }))
-  autoUpdater.on('update-available', (info) => publish({ status: 'downloading', version, next: info.version, percent: 0 }))
+  autoUpdater.on('update-available', (info) =>
+    publish(process.platform === 'darwin' ? { status: 'available', version, next: info.version } : { status: 'downloading', version, next: info.version, percent: 0 }),
+  )
   autoUpdater.on('download-progress', (p) =>
     publish({ status: 'downloading', version, next: state.status === 'downloading' ? state.next : '', percent: Math.round(p.percent) }),
   )
