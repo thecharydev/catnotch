@@ -42,6 +42,8 @@ const notchFor = (window: BrowserWindow | null): Notch | null => {
 }
 
 const handle = (line: HelperLine) => {
+  const id = (line as { id?: number }).id
+  if (id !== undefined) return waiting.get(id)?.(line), void waiting.delete(id)
   if (line.t !== 'notch') return listeners.get(line.t)?.(line)
   notches.set(line.display, { w: line.w, h: line.h })
   for (const window of BrowserWindow.getAllWindows()) window.webContents.send('notch:hardware', notchFor(window))
@@ -82,6 +84,19 @@ export function watchHelper<T extends HelperLine['t']>(cmd: string, types: T[], 
   watches.set(cmd, on)
   send({ cmd, on })
 }
+
+const waiting = new Map<number, (reply: any) => void>()
+let nextId = 1
+
+/** Asks the helper something and waits for the answer (null if it is gone or silent for 3 s). */
+export const askHelper = <T>(cmd: string): Promise<T | null> =>
+  new Promise((resolve) => {
+    if (!child) return resolve(null)
+    const id = nextId++
+    const timer = setTimeout(() => (waiting.delete(id), resolve(null)), 3000)
+    waiting.set(id, (reply) => (clearTimeout(timer), resolve(reply)))
+    send({ id, cmd })
+  })
 
 export const requestLocation = () => send({ cmd: 'requestLocation' })
 

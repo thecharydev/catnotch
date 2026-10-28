@@ -3,6 +3,7 @@ import CoreAudio
 import CoreLocation
 import CoreMediaIO
 import CoreWLAN
+import IOKit
 import Foundation
 
 // MARK: microphone and camera
@@ -116,4 +117,39 @@ func bluetoothDevices() -> [[String: Any]] {
         let battery = percent(info["device_batteryLevelMain"]) ?? sides.min()
         return ["name": name, "connected": true, "battery": battery as Any? ?? NSNull()]
     }
+}
+
+// MARK: usage (answers the `usage` request)
+
+/// GPU busy percent, as the graphics driver reports it (Activity Monitor's
+/// source): the highest "Device Utilization %" among accelerators.
+func gpuUtilization() -> Int? {
+    var iterator: io_iterator_t = 0
+    guard IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IOAccelerator"), &iterator) == 0 else { return nil }
+    defer { IOObjectRelease(iterator) }
+    var best: Int?
+    while case let service = IOIteratorNext(iterator), service != 0 {
+        defer { IOObjectRelease(service) }
+        var props: Unmanaged<CFMutableDictionary>?
+        guard IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == 0,
+              let dict = props?.takeRetainedValue() as? [String: Any],
+              let stats = dict["PerformanceStatistics"] as? [String: Any],
+              let value = stats["Device Utilization %"] as? Int else { continue }
+        best = max(best ?? 0, value)
+    }
+    return best
+}
+
+/// Memory in use, 0 to 1: active, wired and compressed pages. os.freemem()
+/// counts the file cache as used, which reads near 100% on a healthy Mac.
+func memoryUsed() -> Double {
+    var stats = vm_statistics64()
+    var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+    let result = withUnsafeMutablePointer(to: &stats) {
+        $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count) }
+    }
+    guard result == KERN_SUCCESS else { return 0 }
+    let used = Double(stats.active_count) + Double(stats.wire_count) + Double(stats.compressor_page_count)
+    let total = Double(ProcessInfo.processInfo.physicalMemory) / Double(vm_kernel_page_size)
+    return min(1, used / total)
 }

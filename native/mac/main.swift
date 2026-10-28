@@ -96,6 +96,10 @@ FileHandle.standardInput.readabilityHandler = { handle in
         input = String(input[input.index(after: newline)...])
         guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any] else { continue }
         DispatchQueue.main.async {
+            if object["cmd"] as? String == "usage", let id = object["id"] {
+                emit(["id": id, "gpu": gpuUtilization() as Any? ?? NSNull(), "memory": memoryUsed()])
+                return
+            }
             switch object["cmd"] as? String {
             case "watchForeground": watchForeground(object["on"] as? Bool ?? false)
             case "watchStatus": watchStatus(object["on"] as? Bool ?? false)

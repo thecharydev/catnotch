@@ -16,6 +16,7 @@
 import { ipcMain } from 'electron'
 import { type ChildProcess, spawn } from 'child_process'
 import os from 'os'
+import { askHelper } from '../mac/helper'
 
 export interface Usage {
   /** Shares, 0–1. */
@@ -100,7 +101,12 @@ export function registerUsageIpc() {
   // Asking is what keeps the sampler alive; the reaper stops it once nobody
   // has asked for a while. The last GPU reading is kept, so the page shows it
   // at once when it comes back while a fresh one arrives.
-  ipcMain.handle('usage:get', (): Usage => {
+  ipcMain.handle('usage:get', async (): Promise<Usage> => {
+    if (process.platform === 'darwin') {
+      // The helper answers GPU and memory; no sampler to keep alive.
+      const reply = await askHelper<{ gpu: number | null; memory: number }>('usage')
+      return { cpu: cpu(), memory: reply?.memory ?? 1 - os.freemem() / os.totalmem(), gpu: reply?.gpu ?? null }
+    }
     wantedUntil = Date.now() + IDLE
     start()
     return { cpu: cpu(), memory: 1 - os.freemem() / os.totalmem(), gpu }
