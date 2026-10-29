@@ -386,6 +386,23 @@ export default function HomePage() {
     else if (allViews.some((v) => v.id === view) && !shownViews.some((v) => v.id === view)) setView(shownViews[0]?.id ?? 'glance')
   }, [settings.hiddenViews, view, calendarOn])
 
+  // Keys reach the notch only while it is pinned open (it takes focus then).
+  // Left and Right walk the tabs, Escape folds it away; typing is left alone.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const el = event.target as HTMLElement | null
+      if (event.metaKey || event.ctrlKey || event.altKey || el?.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (event.key === 'Escape') return setCloseKey((k) => k + 1)
+      const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+      const at = shownViews.findIndex((v) => v.id === view)
+      if (!step || at < 0) return
+      event.preventDefault()
+      setView(shownViews[(at + step + shownViews.length) % shownViews.length].id)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shownViews, view])
+
   // The apps bar's place: on the right when the tabs dock is under the notch
   // (so the two do not stack), otherwise under the notch; or wherever chosen.
   // They never share a side: a chosen side the dock already has (older settings) falls back to auto.

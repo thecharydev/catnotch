@@ -21,9 +21,9 @@ export const CHROME_Y = BAR_OPEN + PAD_TOP + PAD
 /** On a notched display, how far the closed notch grows past each side of the
  *  cutout while it has something to say (an icon left, a time or dot right). */
 export const WING = 64
-/** The concave curve where the open panel's neck widens into its body. */
-const FILLET = 12
-
+/** Closed on a cutout the shape is this much bigger on each side and below, so no
+ *  hairline of the real notch's edge shows around it. Pure black to match it too. */
+const CUTOUT_BLEED = 2
 /** How far past its edge the pointer may drift before the notch lets go. */
 const LEAVE_MARGIN = 48
 /** Past the margin but not moving (a quick flick away, then stillness): how
@@ -32,8 +32,10 @@ const AWAY_STILL_MS = 700
 /** After the notch changes size, how long the pointer's distance is not trusted. */
 const SETTLE_MS = 900
 
-/** The notch's spring: snappy, barely overshoots. */
-const spring = { type: 'spring' as const, stiffness: 400, damping: 30 }
+/** The notch's spring: a soft, slightly bouncy open like Boring Notch's, and a
+ *  critically damped close, so it settles without ever overshooting its edge. */
+const spring = { type: 'spring' as const, stiffness: 224, damping: 24 }
+const closeSpring = { type: 'spring' as const, stiffness: 195, damping: 28 }
 
 /**
  * Motion animates numbers, not custom properties, so the notch radius cannot
@@ -91,7 +93,7 @@ interface NotchChassisProps {
 /** The little inverted corners where the notch meets the screen's edge, and
  *  the dock and apps tray: the surface's own colour, solid. */
 const CORNER_FILLS: Record<NotchStyle, string> = {
-  black: '#0b0b0d',
+  black: '#000000',
   glass: 'rgb(20, 20, 24)',
 }
 
@@ -124,18 +126,6 @@ const Ear: React.FC<{ side: 'left' | 'right'; notchStyle: NotchStyle }> = ({ sid
       {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={ref} />}
     </div>
   )
-}
-
-/**
- * The open panel on a cutout: a neck as wide as the cutout for its height,
- * then the full body, joined by concave curves so it reads as one shape.
- */
-const neckPath = (W: number, H: number, w: number, h: number, R: number) => {
-  const x0 = (W - w) / 2
-  const x1 = x0 + w
-  const r = FILLET
-  const t = 8
-  return `path('M${x0} 0H${x1}V${h - r}A${r} ${r} 0 0 0 ${x1 + r} ${h}H${W - t}A${t} ${t} 0 0 1 ${W} ${h + t}V${H - R}A${R} ${R} 0 0 1 ${W - R} ${H}H${R}A${R} ${R} 0 0 1 0 ${H - R}V${h + t}A${t} ${t} 0 0 1 ${t} ${h}H${x0 - r}A${r} ${r} 0 0 0 ${x0} ${h - r}Z')`
 }
 
 /** Closes deskNotch until it is opened again from the Start menu. */
@@ -304,15 +294,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       // The notch, and the dock under it when it is out.
       const rects = parts().flatMap((el) => {
         const r = el.getBoundingClientRect()
-        const whole = { x: r.left, y: r.top, width: r.width, height: r.height }
-        // Open on a cutout the shell's top corners are empty (the menu bar
-        // shows through): only the neck and the body take clicks.
-        if (el !== shellRef.current || !necked || !hardware) return [whole]
-        const x = r.left + (r.width - hardware.w) / 2
-        return [
-          { x, y: r.top, width: hardware.w, height: hardware.h },
-          { x: r.left, y: r.top + hardware.h, width: r.width, height: Math.max(0, r.height - hardware.h) },
-        ]
+        return [{ x: r.left, y: r.top, width: r.width, height: r.height }]
       })
       window.bridge?.send('notch:bounds', rects)
     }
@@ -353,7 +335,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
         exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
         transition={{ ...spring, delay: 0.06 }}
         className={`pointer-events-auto relative isolate border ${side === 'bottom' ? 'rounded-[12px] px-3 py-1' : 'rounded-b-[12px] border-t-0 px-1 pb-1.5 pt-2'} ${
-          notchStyle === 'black' ? 'bg-[#0b0b0d] border-white/[0.07]' : 'border-white/[0.1]'
+          notchStyle === 'black' ? 'bg-[#000000] border-white/[0.07]' : 'border-white/[0.1]'
         }`}
         style={notchStyle === 'black' ? undefined : { background: CORNER_FILLS[notchStyle] }}
       >
@@ -373,10 +355,10 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       onDragEnter={onEnter}
       initial={false}
       animate={{
-        width: isOpen ? expandedWidth : hardware ? hardware.w + 2 * wings : 240,
-        height: isOpen ? shellHeight : sliver ? BAR_TUCKED : hardware?.h ?? BAR_CLOSED,
+        width: isOpen ? expandedWidth : hardware ? hardware.w + 2 * wings + CUTOUT_BLEED * 2 : 240,
+        height: isOpen ? shellHeight : sliver ? BAR_TUCKED : hardware ? hardware.h + CUTOUT_BLEED : BAR_CLOSED,
       }}
-      transition={spring}
+      transition={isOpen ? spring : closeSpring}
       // The dock reads these: its buttons and icons grow, its label text does not.
       style={{ willChange: 'width, height', '--dock-btn': `${24 * dockScale}px`, '--dock-icon': dockScale } as React.CSSProperties}
       className={`relative select-none cursor-default ${className}`}
@@ -393,14 +375,13 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
           borderBottomLeftRadius: isOpen ? radius.open : radius.closed,
           borderBottomRightRadius: isOpen ? radius.open : radius.closed,
         }}
-        transition={spring}
+        transition={isOpen ? spring : closeSpring}
         className={`relative isolate w-full h-full text-white overflow-hidden flex flex-col
-                   transition-colors duration-300 ${notchStyle === 'black' ? 'bg-[#0b0b0d]' : ''}`}
+                   transition-colors duration-300 ${notchStyle === 'black' ? 'bg-[#000000]' : ''}`}
         style={{
           borderTopLeftRadius: 0,
           borderTopRightRadius: 0,
           willChange: 'border-radius',
-          clipPath: necked && hardware ? neckPath(expandedWidth, shellHeight, hardware.w, hardware.h, radius.open) : undefined,
           ...(notchStyle === 'black' ? {} : { background: CORNER_FILLS[notchStyle] }),
         }}
       >
@@ -416,7 +397,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
           // surprise. Locking is only the lock button on the dock.
           initial={false}
           animate={{ height: isOpen ? topBar : hardware?.h ?? BAR_CLOSED }}
-          transition={spring}
+          transition={isOpen ? spring : closeSpring}
           className={`shrink-0 flex items-center justify-between relative ${hardware ? 'px-2' : 'px-5'}`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -474,7 +455,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                     ...(notchStyle === 'black' ? {} : { background: CORNER_FILLS[notchStyle] }),
                   }}
                   className={`pointer-events-auto relative isolate flex items-center gap-[3px] border h-[calc(var(--dock-btn,24px)_+_8px)] rounded-full px-1 ${
-                    notchStyle === 'black' ? 'bg-[#0b0b0d] border-white/[0.08]' : 'border-white/[0.1]'
+                    notchStyle === 'black' ? 'bg-[#000000] border-white/[0.08]' : 'border-white/[0.1]'
                   }`}
                 >
                   {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={railBottomRef} />}
@@ -524,7 +505,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                   ...(notchStyle === 'black' ? {} : { background: CORNER_FILLS[notchStyle] }),
                 }}
                 className={`pointer-events-auto relative isolate flex flex-col items-center gap-[3px] border w-[calc(var(--dock-btn,24px)_+_8px)] rounded-b-[16px] border-t-0 px-1 pb-1 pt-1.5 ${
-                  notchStyle === 'black' ? 'bg-[#0b0b0d] border-white/[0.08]' : 'border-white/[0.1]'
+                  notchStyle === 'black' ? 'bg-[#000000] border-white/[0.08]' : 'border-white/[0.1]'
                 }`}
               >
                 {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={side === 'left' ? railLeftRef : railRightRef} />}

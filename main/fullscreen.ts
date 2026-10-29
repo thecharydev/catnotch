@@ -209,19 +209,17 @@ export function setClaudeWaiting(waiting: boolean) {
   if (lastRawResult) handleFullscreenChange(lastRawResult)
 }
 
-/** The editors and terminals a Claude session runs in, by macOS bundle id and by Windows process name (lower case). */
-const EDITORS = new Set(['com.microsoft.vscode', 'com.microsoft.vscodeinsiders', 'com.vscodium', 'code', 'code - insiders', 'cursor', 'windsurf'])
+/** The terminals a CLI session runs in, by macOS bundle id and by Windows process name (lower case). */
 const TERMINALS = new Set([
   'com.apple.terminal', 'com.googlecode.iterm2', 'dev.warp.warp-stable', 'com.mitchellh.ghostty', 'net.kovidgoyal.kitty', 'org.alacritty', 'com.github.wez.wezterm',
   'windowsterminal', 'cmd', 'powershell', 'pwsh', 'conhost', 'wezterm-gui', 'alacritty', 'wt',
 ])
 
-/** Whether the app in front is where a session of this kind is already asking: VS Code for the
- *  extension, a terminal for the CLI. Unknown source: either. Nothing known in front: false. */
+/** Whether a terminal is in front, where a CLI session is already asking. VS Code never counts:
+ *  the extension's prompt sits in a side panel and is easy to miss, so its questions show on the notch. */
 export function claudeIsInFront(source: 'cli' | 'vscode' | 'unknown') {
   const app = (lastRawResult.split(',')[5] ?? '').toLowerCase()
-  if (!app) return false
-  return (source !== 'cli' && EDITORS.has(app)) || (source !== 'vscode' && TERMINALS.has(app))
+  return source !== 'vscode' && TERMINALS.has(app)
 }
 
 /** Whether this notch is tucked right now, for a renderer that just loaded. */

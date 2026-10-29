@@ -17,12 +17,15 @@ const ring = 'focus-visible:outline focus-visible:outline-2 focus-visible:outlin
 const pill = `h-[26px] shrink-0 whitespace-nowrap rounded-full px-4 text-[11px] font-semibold ${ring}`
 const quietPill = `${pill} bg-white/[0.08] font-medium text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white`
 
-export const CLAUDE_STRIP_PERMISSION = 44
+/** Header row, one command line, and the button row, with gaps and padding. */
+export const CLAUDE_STRIP_PERMISSION = 96
 export const CLAUDE_STRIP_QUESTION = 76
 /** Height of what is shown for a request: the strip, the expanded command, or the card. */
+/** The open command box is always this tall (LINES lines and padding); a longer command scrolls inside it. */
+const COMMAND_BOX = LINES * 16 + 12
 export const claudeStripHeight = (request: ClaudeRequest, open: boolean) =>
   request.kind === 'permission'
-    ? CLAUDE_STRIP_PERMISSION + (open ? Math.min(110, Math.min(LINES, request.text.split('\n').length) * 16 + 12) : 0)
+    ? CLAUDE_STRIP_PERMISSION + (open ? COMMAND_BOX - 26 : 0)
     : open ? CLAUDE_QUESTION_HEIGHT : CLAUDE_STRIP_QUESTION
 
 /**
@@ -62,40 +65,47 @@ export const ClaudeStrip: React.FC<{
   if (request.kind === 'permission') {
     const lines = request.text.split('\n')
     return (
-      <motion.div key={request.id} {...motionProps} className={frame} onMouseEnter={() => (hover(true), onOpen(true))} onMouseLeave={() => (hover(false), onOpen(false))} onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center gap-2" style={{ height: CLAUDE_STRIP_PERMISSION }}>
-          {dot}
-          <span className="max-w-[110px] shrink-0 truncate text-[11px] font-semibold text-white">{request.tool}</span>
-          <span className="max-w-[70px] shrink-0 truncate text-[11px] text-white/60">{request.project}</span>
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-label="Show the whole command"
-            onClick={() => onOpen(!open)}
-            className={`min-w-0 flex-1 truncate rounded-[8px] bg-black/40 px-2 py-1 text-left font-mono text-[11px] text-white ${ring}`}
-          >
-            {lines[0]}
-          </button>
-          {count}
-          <button type="button" className={quietPill} onClick={() => onAnswer('deny')}>Deny</button>
-          <motion.button whileTap={{ scale: 0.94 }} type="button" className={`${pill} text-black`} style={{ background: accent }} onClick={() => onAnswer('allow')}>
-            Allow
-          </motion.button>
-          <button
-            type="button"
-            title="Ask in terminal"
-            aria-label="Ask in terminal"
-            onClick={() => onAnswer('pass')}
-            className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white ${ring}`}
-          >
-            <Terminal size={12} strokeWidth={2.4} />
-          </button>
+      <motion.div key={request.id} {...motionProps} className={frame} onMouseEnter={() => hover(true)} onMouseLeave={() => (hover(false), onOpen(false))} onClick={(event) => event.stopPropagation()}>
+        <div className="flex flex-col gap-1.5 py-1.5">
+          {/* Only the text (header and command) expands; hovering the buttons leaves it as is. */}
+          <div className="flex h-5 items-center gap-2" onMouseEnter={() => onOpen(true)}>
+            {dot}
+            <span className="max-w-[160px] shrink-0 truncate text-[11px] font-semibold text-white">{request.tool}</span>
+            <span className="min-w-0 flex-1 truncate text-[11px] text-white/60">{request.project}</span>
+            {count}
+          </div>
+          {open ? (
+            <pre className="h-[108px] shrink-0 overflow-auto whitespace-pre-wrap break-all rounded-[8px] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] leading-[16px] text-white">
+              {lines.join('\n')}
+            </pre>
+          ) : (
+            <button
+              type="button"
+              aria-expanded={false}
+              aria-label="Show the whole command"
+              onMouseEnter={() => onOpen(true)}
+              onClick={() => onOpen(true)}
+              className={`h-[26px] w-full shrink-0 truncate rounded-[8px] bg-black/40 px-2 text-left font-mono text-[11px] text-white ${ring}`}
+            >
+              {lines[0]}
+            </button>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              title="Ask in terminal"
+              aria-label="Ask in terminal"
+              onClick={() => onAnswer('pass')}
+              className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70 transition-colors hover:bg-white/[0.14] hover:text-white ${ring}`}
+            >
+              <Terminal size={12} strokeWidth={2.4} />
+            </button>
+            <button type="button" className={quietPill} onClick={() => onAnswer('deny')}>Deny</button>
+            <motion.button whileTap={{ scale: 0.94 }} type="button" className={`${pill} text-black`} style={{ background: accent }} onClick={() => onAnswer('allow')}>
+              Allow
+            </motion.button>
+          </div>
         </div>
-        {open && (
-          <pre className="mb-2 max-h-[110px] overflow-auto whitespace-pre-wrap break-all rounded-[8px] bg-black/40 px-2.5 py-1.5 font-mono text-[11px] leading-[16px] text-white">
-            {lines.join('\n')}
-          </pre>
-        )}
       </motion.div>
     )
   }

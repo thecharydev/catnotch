@@ -23,11 +23,11 @@ const timeText = (event: CalendarEvent, day: Date) => {
 const quiet = 'rounded-full bg-white/[0.12] px-3 py-1 text-[11px] font-semibold text-white hover:bg-white/[0.2]'
 
 const Message: React.FC<{ text: string; note?: string; action?: string; onAction?: () => void; accent: string }> = ({ text, note, action, onAction, accent }) => (
-  <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center" onClick={(event) => event.stopPropagation()}>
-    <p className="text-[13px] font-semibold text-white">{text}</p>
-    {note && <p className="text-[11px] leading-snug text-white/50">{note}</p>}
+  <div className="flex h-full flex-col items-center gap-1.5 overflow-y-auto px-4 py-2 text-center [&>:first-child]:mt-auto [&>:last-child]:mb-auto" onClick={(event) => event.stopPropagation()}>
+    <p className="shrink-0 text-[13px] font-semibold text-white">{text}</p>
+    {note && <p className="shrink-0 text-[11px] leading-snug text-white/50">{note}</p>}
     {action && (
-      <motion.button whileTap={{ scale: 0.94 }} type="button" className="rounded-full px-3 py-1 text-[11px] font-semibold text-black" style={{ background: accent }} onClick={onAction}>
+      <motion.button whileTap={{ scale: 0.94 }} type="button" className="mt-0.5 shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold text-black" style={{ background: accent }} onClick={onAction}>
         {action}
       </motion.button>
     )}

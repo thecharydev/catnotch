@@ -60,6 +60,8 @@ func handleCalendar(_ cmd: String, _ id: Any, _ args: [String: Any]) {
         emit(["id": id, "status": calendarAccess()])
     case "calendarRequest":
         if calendarAccess() != "unknown" { return emit(["id": id, "status": calendarAccess()]) }
+        // A background helper has no window to anchor the system prompt to; come forward so it shows.
+        NSApp.activate(ignoringOtherApps: true)
         let done: (Bool, Error?) -> Void = { _, _ in
             DispatchQueue.main.async { emit(["id": id, "status": calendarAccess()]) }
         }

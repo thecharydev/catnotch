@@ -20,7 +20,7 @@ export type ClaudeChoice = 'allow' | 'deny' | 'pass' | { answers: Record<string,
  * and drops each after 60 s). The notch shows the first.
  */
 export function useClaude() {
-  const [requests, setRequests] = useState<ClaudeRequest[]>([])
+  const [requests, setRequests] = useState<ClaudeRequest[]>([{ id: 'dummy', kind: 'permission', sessionId: 'dummy', tool: 'Bash', project: 'deskNotch', text: 'npm run build:helper && git push origin master --force-with-lease\nrm -rf node_modules/.cache' }]) // TEMP DUMMY
   const [feed, setFeed] = useState<SessionsPayload>({ enabled: false, sessions: [] })
 
   useEffect(() => {

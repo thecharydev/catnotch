@@ -62,6 +62,13 @@ mac:
       to: DeskNotchHelper.app
     - from: native/mac/build/mediaremote
       to: mediaremote
-  identity: null
+  identity: "-"
   extendInfo:
     LSUIElement: true
+    # macOS reads these from the app that is responsible for the helper (this
+    # one), not from the helper's own plist; without them the Calendar and
+    # Location prompts are refused without ever showing.
+    NSCalendarsUsageDescription: DeskNotch reads your calendar to show your next events. It never changes it.
+    NSCalendarsFullAccessUsageDescription: DeskNotch reads your calendar to show your next events. It never changes it.
+    NSLocationUsageDescription: DeskNotch shows the name of the Wi-Fi network you join.
+    NSLocationWhenInUseUsageDescription: DeskNotch shows the name of the Wi-Fi network you join.
