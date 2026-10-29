@@ -1,6 +1,6 @@
 /** Most used and installed apps on macOS. An app's id is its .app path. The
  *  list comes from the folders apps live in, the launch counts from Spotlight. */
-import { app, ipcMain, shell } from 'electron'
+import { ipcMain, nativeImage, shell } from 'electron'
 import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -58,7 +58,15 @@ const icons = new Map<string, string | null>()
 
 const withIcon = async (entry: { id: string; name: string }): Promise<TopApp> => {
   if (!icons.has(entry.id)) {
-    icons.set(entry.id, await app.getFileIcon(entry.id, { size: 'large' }).then((image) => image.toDataURL(), () => null))
+    // Not app.getFileIcon: on macOS it kills the whole process (SIGTRAP, a
+    // native crash no catch can stop) as soon as a few app icons are asked for.
+    icons.set(
+      entry.id,
+      await nativeImage.createThumbnailFromPath(entry.id, { width: 64, height: 64 }).then(
+        (image) => (image.isEmpty() ? null : image.toDataURL()),
+        () => null,
+      ),
+    )
   }
   return { ...entry, icon: icons.get(entry.id) ?? null }
 }

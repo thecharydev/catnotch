@@ -14,7 +14,7 @@ export function registerSettingsIpc() {
 
   ipcMain.handle('app:is-store', () => store)
   // A fixed address, not one from the page: the renderer can only open this.
-  ipcMain.handle('app:open-repo', () => shell.openExternal('https://github.com/yashsrivasta7a/deskNotch'))
+  ipcMain.handle('app:open-repo', () => shell.openExternal('https://github.com/thecharydev/deskNotch'))
   // The Store build's switch: Windows' own Startup apps page, where its task is.
   ipcMain.handle('settings:open-startup', () => shell.openExternal('ms-settings:startupapps'))
 

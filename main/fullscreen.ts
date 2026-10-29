@@ -189,7 +189,9 @@ export function stopFullscreenWatch() {
  *  its PowerShell costs ~80 MB, not worth keeping for nothing. */
 export function checkAndApplyFullscreenState() {
   const settings = (readStore().settings ?? {}) as Record<string, unknown>
-  if (settings.hideOnFullscreen === false && settings.tuckForBrowsers !== true) {
+  // Claude's popups need to know what is in front, so its switch keeps the watcher going.
+  const claudeOn = readStore().claudeHooks?.enabled === true
+  if (settings.hideOnFullscreen === false && settings.tuckForBrowsers !== true && !claudeOn) {
     stopFullscreenWatch()
     lastRawResult = ''
     // Nothing in front on any monitor: every notch shown and untucked.
@@ -205,6 +207,21 @@ export function setClaudeWaiting(waiting: boolean) {
   if (claudeWaiting === waiting) return
   claudeWaiting = waiting
   if (lastRawResult) handleFullscreenChange(lastRawResult)
+}
+
+/** The editors and terminals a Claude session runs in, by macOS bundle id and by Windows process name (lower case). */
+const EDITORS = new Set(['com.microsoft.vscode', 'com.microsoft.vscodeinsiders', 'com.vscodium', 'code', 'code - insiders', 'cursor', 'windsurf'])
+const TERMINALS = new Set([
+  'com.apple.terminal', 'com.googlecode.iterm2', 'dev.warp.warp-stable', 'com.mitchellh.ghostty', 'net.kovidgoyal.kitty', 'org.alacritty', 'com.github.wez.wezterm',
+  'windowsterminal', 'cmd', 'powershell', 'pwsh', 'conhost', 'wezterm-gui', 'alacritty', 'wt',
+])
+
+/** Whether the app in front is where a session of this kind is already asking: VS Code for the
+ *  extension, a terminal for the CLI. Unknown source: either. Nothing known in front: false. */
+export function claudeIsInFront(source: 'cli' | 'vscode' | 'unknown') {
+  const app = (lastRawResult.split(',')[5] ?? '').toLowerCase()
+  if (!app) return false
+  return (source !== 'cli' && EDITORS.has(app)) || (source !== 'vscode' && TERMINALS.has(app))
 }
 
 /** Whether this notch is tucked right now, for a renderer that just loaded. */

@@ -330,7 +330,7 @@ The same build also makes a **Store package** (`dist/*.appx`) next to the GitHub
    - `Package/Identity/Name` → `identityName`
    - `Package/Identity/Publisher` → `publisher` (starts with `CN=`)
    - `Package/Properties/PublisherDisplayName` → `publisherDisplayName`
-4. For the listing you will need: a description, 1+ screenshots, a category (Productivity), the age-rating questionnaire, and a **privacy policy URL**. Use `PRIVACY.md` on GitHub: `https://github.com/yashsrivasta7a/deskNotch/blob/master/PRIVACY.md`.
+4. For the listing you will need: a description, 1+ screenshots, a category (Productivity), the age-rating questionnaire, and a **privacy policy URL**. Use `PRIVACY.md` on GitHub: `https://github.com/thecharydev/deskNotch/blob/master/PRIVACY.md`.
 5. When asked about the **runFullTrust** capability, explain that DeskNotch is a desktop (Electron) app packaged for the Store.
 
 **Each release**
@@ -399,7 +399,7 @@ Clicking the notch's top bar used to lock it open by surprise. Now only the **lo
 
 ### GitHub link in Settings
 
-A **GitHub** item, with GitHub's own logo, sits at the bottom of the Settings sidebar, visible in every section. It opens `github.com/yashsrivasta7a/deskNotch`. It is opened from the main process (`app:open-repo`), so the settings page cannot open any other address. It is fine for the Store version too, since it links to the project rather than asking people to download the app elsewhere.
+A **GitHub** item, with GitHub's own logo, sits at the bottom of the Settings sidebar, visible in every section. It opens `github.com/thecharydev/deskNotch`. It is opened from the main process (`app:open-repo`), so the settings page cannot open any other address. It is fine for the Store version too, since it links to the project rather than asking people to download the app elsewhere.
 
 ### Microsoft Store identity
 

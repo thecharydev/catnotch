@@ -11,5 +11,7 @@
   <key>LSUIElement</key><true/>
   <key>NSLocationUsageDescription</key><string>DeskNotch shows the name of the Wi-Fi network you join.</string>
   <key>NSLocationWhenInUseUsageDescription</key><string>DeskNotch shows the name of the Wi-Fi network you join.</string>
+  <key>NSCalendarsUsageDescription</key><string>DeskNotch reads your calendar to show your next events. It never changes it.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>DeskNotch reads your calendar to show your next events. It never changes it.</string>
 </dict>
 </plist>

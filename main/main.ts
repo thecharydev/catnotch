@@ -56,6 +56,13 @@ const createNotchWindow = (bounds: Rect) => {
   window.setAlwaysOnTop(true, 'screen-saver')
   // visibleOnFullScreen: stay over a full screen Space too (macOS only).
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  // macOS: the strip is not an app window, so Mission Control should not list it.
+  if (process.platform === 'darwin') window.setHiddenInMissionControl(true)
+
+  // macOS clamps a frame below the menu bar until the window is high enough,
+  // so put it at the top edge again now that it is, and whenever it is shown.
+  window.setBounds(bounds)
+  window.on('show', () => window.setBounds(bounds))
 
   window.setIgnoreMouseEvents(true, { forward: true })
   // A notch made later (a display plugged in) honours Hide in screenshots too.

@@ -100,7 +100,12 @@ FileHandle.standardInput.readabilityHandler = { handle in
                 emit(["id": id, "gpu": gpuUtilization() as Any? ?? NSNull(), "memory": memoryUsed()])
                 return
             }
+            if let id = object["id"], let cmd = object["cmd"] as? String, cmd.hasPrefix("calendar") {
+                handleCalendar(cmd, id, object)
+                return
+            }
             switch object["cmd"] as? String {
+            case "watchCalendar": watchCalendar(object["on"] as? Bool ?? false)
             case "watchForeground": watchForeground(object["on"] as? Bool ?? false)
             case "watchStatus": watchStatus(object["on"] as? Bool ?? false)
             case "requestLocation": location.request()

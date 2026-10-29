@@ -25,7 +25,11 @@ const iconFor = async (file: string) => {
   const cached = icons.get(file)
   if (cached) return cached
   try {
-    const image = await app.getFileIcon(file, { size: 'normal' })
+    // macOS: app.getFileIcon crashes the process natively, so ask for the thumbnail.
+    const image =
+      process.platform === 'darwin'
+        ? await nativeImage.createThumbnailFromPath(file, { width: 64, height: 64 })
+        : await app.getFileIcon(file, { size: 'normal' })
     icons.set(file, image)
     return image
   } catch {

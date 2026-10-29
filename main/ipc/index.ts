@@ -29,5 +29,7 @@ export function registerIpc() {
   registerDisplayIpc()
   registerDesktimeIpc()
   registerClaudeIpc()
+  // macOS only: the module is not even loaded on Windows.
+  if (process.platform === 'darwin') require('./calendar').registerCalendarIpc()
 }
 

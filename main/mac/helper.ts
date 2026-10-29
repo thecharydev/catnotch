@@ -15,6 +15,7 @@ type HelperLine =
   | { t: 'mic'; on: boolean }
   | { t: 'camera'; on: boolean }
   | { t: 'wifi'; connected: boolean; ssid: string | null; signal: number; location: 'granted' | 'denied' | 'unknown' }
+  | { t: 'calendarChanged' }
   | { t: 'bluetooth'; devices: { name: string; connected: boolean; battery: number | null }[] }
 
 export type HelperEvent<T extends HelperLine['t']> = Extract<HelperLine, { t: T }>
@@ -88,14 +89,14 @@ export function watchHelper<T extends HelperLine['t']>(cmd: string, types: T[], 
 const waiting = new Map<number, (reply: any) => void>()
 let nextId = 1
 
-/** Asks the helper something and waits for the answer (null if it is gone or silent for 3 s). */
-export const askHelper = <T>(cmd: string): Promise<T | null> =>
+/** Asks the helper something and waits for the answer (null if it is gone or silent for `wait` ms). */
+export const askHelper = <T>(cmd: string, args: object = {}, wait = 3000): Promise<T | null> =>
   new Promise((resolve) => {
     if (!child) return resolve(null)
     const id = nextId++
-    const timer = setTimeout(() => (waiting.delete(id), resolve(null)), 3000)
+    const timer = setTimeout(() => (waiting.delete(id), resolve(null)), wait)
     waiting.set(id, (reply) => (clearTimeout(timer), resolve(reply)))
-    send({ id, cmd })
+    send({ id, cmd, ...args })
   })
 
 export const requestLocation = () => send({ cmd: 'requestLocation' })

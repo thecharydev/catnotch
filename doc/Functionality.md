@@ -50,12 +50,21 @@ Shown when the notch opens. Room for real controls.
 - [ ] **Notification peek**: notifications surface here instead of the corner.
 - [ ] **Laptop temperature & thermals**
 
-## Claude Code popups
+## Claude Code popups and the Claude tab
 - A local server (`main/ipc/claude.ts`, `127.0.0.1:47821`, secret token) receives Claude Code's `PermissionRequest` hook and its `PreToolUse` hook for `AskUserQuestion`. The notch opens on a request (`ClaudeView`) and the click becomes the hook's reply.
-- Allow, Deny (Claude is told "Denied from DeskNotch"), Ask in terminal, question options with Confirm for multi select. One at a time, "1 of N".
-- Any failure or 30 s of silence is an empty reply, so Claude shows its own prompt. It never takes focus and shows over a fullscreen app while a request waits.
+- Allow, Deny (Claude is told "Denied from DeskNotch"), Ask in terminal, question options with Confirm for multi select. One at a time, "1 of N". Shown as a slim strip over the open tab; the 60 second timer pauses while you type an answer.
+- Any failure or 60 s of silence is an empty reply, so Claude shows its own prompt. It never takes focus and shows over a fullscreen app while a request waits.
 - Settings, General, Claude Code popups adds and removes only our two hook entries in `settings.json` (`CLAUDE_CONFIG_DIR` honoured), after a preview, with a one time `.deskNotch.bak`.
-- Spec: `docs/specs/0002-claude-code-notch-popup/index.md`.
+- Claude tab (`ClaudeSessions`): hooks `UserPromptSubmit`, `Stop`, `SessionEnd` post to `/desknotch/event` (always an empty reply), plus a 15 s scan of `<config dir>/projects/*/*.jsonl` seeds open sessions and gives the badge from the transcript's `entrypoint`. `SessionStart` is not used: it does not fire as an http hook. Sessions leave on SessionEnd or after 3 h; Working with no change for 10 min shows Idle.
+- Questions show full text, options, and a text box; typed text is sent as the answer (capped at 2000 characters). Clicking the box takes keyboard focus (`notch:pinned`), sending or leaving gives it back.
+- Chat: clicking a session row opens `ClaudeChat`. `claude:chat` reads the last 256 KB of that session's transcript (only under `<config dir>/projects`, symlinks resolved) and returns the last 30 turns (text and one line per tool call); the view polls every 2 s. `claude:send` runs `claude -p --resume <id> --permission-mode default -- <text>` with `execFile` (no shell) in the session's folder, blocked while the session is Working or Waiting; permissions from that run still arrive as normal popups. Its own `SessionEnd` is ignored.
+- Specs: `docs/specs/0002-claude-code-notch-popup/index.md`, `docs/specs/0005-claude-section-sessions-and-answers.md`, `docs/specs/0007-claude-session-chat-on-notch.md`.
+
+## Calendar (macOS)
+- The Swift helper (`native/mac/Calendar.swift`) reads the Mac's calendars with EventKit and never writes. `main/ipc/calendar.ts` relays `calendar:*` channels and checks join links (https, Zoom, Meet, Teams) before opening them. Loaded on macOS only.
+- `CalendarView` (a dock view after Files) lists today and tomorrow; Home shows the next event line. Settings: Calendar on or off, and per calendar toggles (`showCalendar`, `hiddenCalendarIds`, `calendarConsent`).
+- Access is requested only by the Allow button. Events are held in memory only.
+- Spec: `docs/specs/0003-notch-calendar-agenda.md`.
 
 ## Behaviour
 

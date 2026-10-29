@@ -1,7 +1,7 @@
-# 0006. Claude session chat: read the conversation and send a message from the notch
+# 0007. Claude session chat: read the conversation and send a message from the notch
 
 **Date**: 2026-10-29
-**Status**: Proposed
+**Status**: Accepted
 
 ## Summary
 
@@ -178,7 +178,7 @@ No build approach is recorded for the project, so this uses end to end thin slic
 
 ## Follow-up
 
-- [ ] Build task 1 spike results go here; they decide whether `--resume` keeps the session id.
+- [x] Build task 1 spike, run 2026-10-29 on Claude Code 2.1.x: `claude -p --resume <id>` keeps the same session id and appends to the same `<id>.jsonl` (34 to 47 lines). The quiet run fires `SessionEnd`, so DeskNotch ignores that event while its own send is running. VS Code resume and a permission popup from a quiet run not yet checked by hand.
 - [ ] A later spec could stream the reply as it is written (`--output-format stream-json`) and add a "Claude program path" setting.
 - [ ] A later spec could add click to focus the session's own window, and live update of that window.
 - [ ] After build, add one line to 0005 noting its transcript text rule is relaxed by this spec.

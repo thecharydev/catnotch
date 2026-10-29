@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { BotAvatar, type BotAvatarType } from 'bot-avatars'
 import { Bot, ImagePlus, LayoutGrid, PanelsTopLeft, Settings as Cog } from 'lucide-react'
@@ -30,6 +30,12 @@ export interface Settings {
   showAiUsage: boolean
   /** The Right now card: apps on the mic or camera, and the battery, while there are any. */
   showStatus: boolean
+  /** macOS: the Calendar view and the next event line on Home. */
+  showCalendar: boolean
+  /** Calendars switched off, by EventKit id. */
+  hiddenCalendarIds: string[]
+  /** Allow was clicked on the Calendar explainer. */
+  calendarConsent: boolean
   ambientVideo: boolean
   albumTint: boolean
   startOnBoot: boolean
@@ -83,6 +89,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showFocus: false,
   showAiUsage: true,
   showStatus: false,
+  showCalendar: true,
+  hiddenCalendarIds: [],
+  calendarConsent: false,
   ambientVideo: true,
   albumTint: true,
   startOnBoot: true,
@@ -263,7 +272,7 @@ interface SettingsPanelProps {
   desktimeInstalled: boolean
 }
 
-const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+export const isMac = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
 
 /** The updater's state, as main/updater.ts reports it. */
 type UpdateState = {
@@ -276,7 +285,7 @@ type UpdateState = {
 /** Version, update status, and the one thing to do about it. */
 /** Claude Code's permission and question popups: a switch that adds our hooks to Claude's settings.json, after showing exactly what it adds. */
 const ClaudeRow: React.FC = () => {
-  type Status = { enabled: boolean; running: boolean; port: number; configPath: string; valid: boolean }
+  type Status = { enabled: boolean; running: boolean; port: number; configPath: string; valid: boolean; current: boolean }
   const [status, setStatus] = useState<Status | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [snippet, setSnippet] = useState<string | null>(null)
@@ -305,14 +314,14 @@ const ClaudeRow: React.FC = () => {
 
   return (
     <Row
-      title="Claude Code popups"
-      detail="Allow or deny commands, and answer questions, right on the notch"
+      title="Claude Code on the notch"
+      detail="See every Claude session, allow or deny commands, and answer questions right on the notch"
       below={
         <>
           {preview && (
             <div className="rounded-lg bg-black/30 p-2.5">
               <p className="text-[10.5px] leading-snug text-white/60">
-                This adds two hooks to {status.configPath}. A backup is saved the first time, nothing else in the file changes, and new Claude sessions pick it up.
+                This adds hooks to {status.configPath}. A backup is saved the first time, nothing else in the file changes, and new Claude sessions pick it up.
               </p>
               <pre className="mt-1.5 max-h-[90px] overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-white/70">{preview}</pre>
               <div className="mt-2 flex gap-1.5" onClick={halt}>
@@ -349,6 +358,17 @@ const ClaudeRow: React.FC = () => {
           setPreview((await window.bridge?.invoke<string>('claude:preview')) ?? null)
         }}
       />
+      {status.enabled && !status.current && status.valid && !preview && (
+        <button
+          type="button"
+          className={`${small} ml-2 bg-white/[0.08] text-white/75`}
+          onClick={async () => {
+            setPreview((await window.bridge?.invoke<string>('claude:preview')) ?? null)
+          }}
+        >
+          Update hooks
+        </button>
+      )}
     </Row>
   )
 }
@@ -455,6 +475,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
     <Switch label={label} on={settings[key]} disabled={!settings[key] && !fits(key)} onChange={(v) => set(key, v)} />
   )
   const hiddenViews = settings.hiddenViews ?? []
+  const [calendars, setCalendars] = useState<{ id: string; title: string; account: string }[]>([])
+  useEffect(() => {
+    if (isMac && settings.showCalendar) void window.bridge?.invoke<typeof calendars>('calendar:calendars').then((list) => setCalendars(list ?? []))
+  }, [settings.showCalendar])
+  const hiddenCalendars = settings.hiddenCalendarIds ?? []
 
   const content: Record<PartId, React.ReactNode> = {
     glance: (
@@ -491,6 +516,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
           >
             {card('showAiUsage', 'AI usage')}
           </Row>
+          {isMac && (
+            <Row
+              title="Calendar"
+              detail="Today and tomorrow from your Mac's Calendar"
+              below={
+                settings.showCalendar && calendars.length > 0 ? (
+                  <Chips
+                    options={calendars.map((c) => ({ id: c.id, label: c.account ? `${c.title} · ${c.account}` : c.title }))}
+                    value={calendars.map((c) => c.id).filter((id) => !hiddenCalendars.includes(id))}
+                    onToggle={(id) => set('hiddenCalendarIds', hiddenCalendars.includes(id) ? hiddenCalendars.filter((x) => x !== id) : [...hiddenCalendars, id])}
+                  />
+                ) : undefined
+              }
+            >
+              <Switch label="Calendar" on={settings.showCalendar} onChange={(v) => set('showCalendar', v)} />
+            </Row>
+          )}
         </Group>
       </>
     ),
@@ -664,6 +706,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               />
             </Row>
           ))}
+          {isMac && settings.showCalendar && (
+            <Row title="Calendar">
+              <Switch
+                label="Calendar tab"
+                on={!hiddenViews.includes('calendar')}
+                onChange={(on) => set('hiddenViews', on ? hiddenViews.filter((x) => x !== 'calendar') : [...hiddenViews, 'calendar'])}
+              />
+            </Row>
+          )}
+          <Row title="Claude">
+            <Switch
+              label="Claude tab"
+              on={!hiddenViews.includes('claude')}
+              onChange={(on) => set('hiddenViews', on ? hiddenViews.filter((x) => x !== 'claude') : [...hiddenViews, 'claude'])}
+            />
+          </Row>
         </Group>
         <Group>
           <Row title="Size">

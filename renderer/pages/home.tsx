@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import { AnimatePresence, motion } from 'motion/react'
-import { FolderOpen, LayoutGrid, ListTodo, Settings as Cog } from 'lucide-react'
-import { NotchChassis, CHROME_X, CHROME_Y, PAD } from '../components/notch/NotchChassis'
+import { CalendarDays, FolderOpen, LayoutGrid, ListTodo, Settings as Cog, Terminal } from 'lucide-react'
+import { NotchChassis, CHROME_X, CHROME_Y, PAD, WING } from '../components/notch/NotchChassis'
 import { AmbientVideo } from '../components/notch/AmbientVideo'
-import { CollapsedStatus, type Moment } from '../components/notch/CollapsedStatus'
+import { CollapsedStatus, LOW_LEVEL, type Moment } from '../components/notch/CollapsedStatus'
 import { ViewRail, RailButton, type ViewDefinition } from '../components/notch/ViewSwitcher'
-import { SettingsPanel, DEFAULT_SETTINGS, DOCK_SCALE, SETTINGS_PANE, type Settings } from '../components/widgets/SettingsPanel'
+import { SettingsPanel, DEFAULT_SETTINGS, isMac, DOCK_SCALE, SETTINGS_PANE, type Settings } from '../components/widgets/SettingsPanel'
 import { DeskView, DESK_WIDTH, DESK_HEIGHT } from '../components/widgets/DeskView'
 import { AppsRow } from '../components/widgets/AppsRow'
 import { useFocusLog } from '../hooks/useFocusLog'
@@ -15,7 +15,7 @@ import { CaptureView, CAPTURE_HEIGHT, CAPTURE_WIDTH } from '../components/widget
 import { DoneView, DONE_HEIGHT, DONE_WIDTH } from '../components/widgets/DoneView'
 import { ReminderView, REMINDER_HEIGHT, REMINDER_WIDTH } from '../components/widgets/ReminderView'
 import { useReminders, type Reminder } from '../hooks/useReminders'
-import { ClaudeView, CLAUDE_WIDTH, CLAUDE_PERMISSION_HEIGHT, CLAUDE_QUESTION_HEIGHT } from '../components/widgets/ClaudeView'
+import { ClaudeStrip, ClaudeSessions, ClaudeChat, claudeSessionsHeight, claudeStripHeight, CLAUDE_WIDTH, CLAUDE_CHAT_HEIGHT } from '../components/widgets/ClaudeView'
 import { useClaude } from '../hooks/useClaude'
 import type { FileItem } from '../hooks/useFiles'
 import { botAvatarPalette } from 'bot-avatars'
@@ -36,7 +36,10 @@ import { refreshAiLimits, useAiLimits } from '../hooks/useAiLimits'
 import { usePrivacy } from '../hooks/usePrivacy'
 import { useHeadphones } from '../hooks/useHeadphones'
 import { useBattery } from '../hooks/useBattery'
+import { useNow } from '../hooks/useNow'
 import { useScreenTime } from '../hooks/useScreenTime'
+import { useCalendar, upcoming, nextToday, untilText } from '../hooks/useCalendar'
+import { CalendarView, CALENDAR_WIDTH, CALENDAR_HEIGHT } from '../components/widgets/CalendarView'
 
 /** The places to go, as circles on the dock. Settings is a control, not a
  *  place, so it sits after them with the lock. */
@@ -46,9 +49,13 @@ const VIEWS: ViewDefinition[] = [
   { id: 'files', label: 'Files', icon: <FolderOpen size={12} strokeWidth={2.2} /> },
 ]
 
+const CLAUDE_VIEW: ViewDefinition = { id: 'claude', label: 'Claude', icon: <Terminal size={12} strokeWidth={2.2} /> }
+const CALENDAR_VIEW: ViewDefinition = { id: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} strokeWidth={2.2} /> }
+
 /** Each view sets the shell it needs; the notch springs between them. */
 const SIZES: Record<string, { width: number; height: number }> = {
   desk: { width: DESK_WIDTH, height: DESK_HEIGHT },
+  calendar: { width: CALENDAR_WIDTH, height: CHROME_Y + CALENDAR_HEIGHT },
   settings: { width: CHROME_X + 620, height: CHROME_Y + SETTINGS_PANE },
 }
 
@@ -56,6 +63,9 @@ const SIZES: Record<string, { width: number; height: number }> = {
 const PADDING = PAD
 /** The bar, a clear step, the cards, and room below them. */
 const GLANCE_HEIGHT = CHROME_Y + TILE
+
+/** Idle on a cutout with the companion on: a small wing just wide enough for it. */
+const IDLE_WING = 30
 
 /** The battery levels that each get a warning on the way down, lowest first. */
 const LOW_STEPS = [0.1, 0.2]
@@ -326,6 +336,16 @@ export default function HomePage() {
 
   // Screen time comes from DeskTime; without it installed the option stays off.
   const screenTime = useScreenTime(settings.collapsedRight === 'screen' || (settings.showAvatar && settings.companionMode === 'screen'))
+  // On a notched display the closed notch is only the cutout until there is an
+  // event to show: it grows wings for these.
+  const wingsActive = Boolean(
+    moment ||
+      timer.isRunning ||
+      nowPlaying?.isPlaying ||
+      privacy.mic ||
+      privacy.camera ||
+      (battery.supported && !battery.charging && battery.level <= LOW_LEVEL),
+  )
   const collapsedRight = settings.collapsedRight === 'screen' && !screenTime.installed ? 'time' : (settings.collapsedRight ?? 'time')
   const companionMode = settings.companionMode === 'screen' && !screenTime.installed ? 'focus' : settings.companionMode
 
@@ -346,10 +366,25 @@ export default function HomePage() {
 
   // Tabs taken off the dock. On a hidden one, move to the first still shown;
   // with none shown, the notch simply opens on the glance.
-  const shownViews = VIEWS.filter((v) => !(settings.hiddenViews ?? []).includes(v.id))
+  const claude = useClaude()
+  const [chatId, setChatId] = useState<string | null>(null)
   useEffect(() => {
-    if (VIEWS.some((v) => v.id === view) && !shownViews.some((v) => v.id === view)) setView(shownViews[0]?.id ?? 'glance')
-  }, [settings.hiddenViews, view])
+    if (view !== 'claude') setChatId(null)
+  }, [view])
+  const calendarOn = isMac && settings.showCalendar
+  const calendar = useCalendar(calendarOn, view === 'calendar')
+  const clock = useNow()
+  const agenda = upcoming(calendar.events, settings.hiddenCalendarIds ?? [], clock)
+  const nextEvent = calendarOn && calendar.access === 'granted' ? nextToday(agenda, clock) : undefined
+  // A feature switched off leaves no tab behind.
+  const allViews = [...VIEWS, ...(calendarOn ? [CALENDAR_VIEW] : []), ...(claude.enabled ? [CLAUDE_VIEW] : [])]
+  const shownViews = allViews.filter((v) => !(settings.hiddenViews ?? []).includes(v.id))
+  useEffect(() => {
+    // A waiting Claude request opens its own view, whatever the tab's switch says.
+    if (view === 'claude' && claude.requests.length) return
+    if (view === 'calendar' && !calendarOn) setView('glance')
+    else if (allViews.some((v) => v.id === view) && !shownViews.some((v) => v.id === view)) setView(shownViews[0]?.id ?? 'glance')
+  }, [settings.hiddenViews, view, calendarOn])
 
   // The apps bar's place: on the right when the tabs dock is under the notch
   // (so the two do not stack), otherwise under the notch; or wherever chosen.
@@ -392,12 +427,16 @@ export default function HomePage() {
 
   // Claude Code needs an answer: the notch opens on it, whatever it was
   // showing, and folds once nothing is waiting (the main process drops a
-  // request after 30 s, so a missed one clears itself).
-  const claude = useClaude()
+  // request after 60 s, so a missed one clears itself).
   const claudeCount = claude.requests.length
+  // Open on a tab, the request is a strip over it; the tab is left alone.
+  const [claudeOpen, setClaudeOpen] = useState(false)
+  const first = claude.requests[0]
+  useEffect(() => setClaudeOpen(false), [first?.id])
   useEffect(() => {
-    if (claudeCount) peek('claude', 35_000)
-    else if (beforePeek.current !== null && view === 'claude') endRing()
+    if (claudeCount) {
+      if (!notchOpen.current) peek('claude', 65_000)
+    } else if (beforePeek.current !== null && view === 'claude') endRing()
   }, [claudeCount])
 
   const wasFinished = useRef(timer.finished)
@@ -437,9 +476,11 @@ export default function HomePage() {
   const widths = [...fixed, ...aiShown.map(providerWidth)]
   const glanceWidth = PADDING * 2 + widths.reduce((sum, w) => sum + w, 0) + (widths.length - 1) * TILE_GAP
 
-  const size =
+  // A request in front, with no tab under it: the notch was closed when it came.
+  const stripAlone = view === 'claude' && !!first && beforePeek.current !== null
+  const baseSize =
     view === 'glance'
-      ? { width: Math.max(320, glanceWidth), height: GLANCE_HEIGHT }
+      ? { width: Math.max(320, glanceWidth), height: GLANCE_HEIGHT + (nextEvent ? 20 : 0) }
       : view === 'files'
         ? { width: shelfWidth(shelfCount), height: CHROME_Y + SHELF_HEIGHT }
         : view === 'desk'
@@ -451,8 +492,18 @@ export default function HomePage() {
           : view === 'reminder'
             ? { width: REMINDER_WIDTH, height: CHROME_Y + REMINDER_HEIGHT }
           : view === 'claude'
-            ? { width: CLAUDE_WIDTH, height: CHROME_Y + (claude.requests[0]?.kind === 'question' ? CLAUDE_QUESTION_HEIGHT : CLAUDE_PERMISSION_HEIGHT) }
+            ? {
+                width: CLAUDE_WIDTH,
+                height:
+                  CHROME_Y + (chatId ? CLAUDE_CHAT_HEIGHT : claudeSessionsHeight(claude.sessions.length)),
+              }
           : SIZES[view]
+  const stripH = first ? claudeStripHeight(first, claudeOpen) : 0
+  const size = !first
+    ? baseSize
+    : stripAlone
+      ? { width: CLAUDE_WIDTH, height: CHROME_Y + stripH }
+      : { width: Math.max(baseSize.width, CLAUDE_WIDTH), height: baseSize.height + stripH }
 
   return (
     <React.Fragment>
@@ -462,6 +513,7 @@ export default function HomePage() {
       <div className="w-full h-full flex justify-center items-start pointer-events-none">
         <div className="pointer-events-auto">
           <NotchChassis
+            wings={wingsActive ? WING : showCompanion ? IDLE_WING : 0}
             notchStyle={settings.notchStyle}
             ambient={(isOpen) => (
               // Only behind the glance, and only when the music it belongs to is shown.
@@ -488,7 +540,7 @@ export default function HomePage() {
             closeKey={closeKey}
             tucked={tucked}
             dockScale={DOCK_SCALE[settings.dockSize ?? 'default'] ?? 1}
-            rail={view === 'capture' || view === 'done' || view === 'reminder' || view === 'claude' ? undefined : 
+            rail={view === 'capture' || view === 'done' || view === 'reminder' || stripAlone ? undefined : 
               <>
                 <ViewRail views={shownViews} active={view} onChange={setView} />
                 <RailButton
@@ -502,6 +554,22 @@ export default function HomePage() {
               </>
             }
             expandedContent={
+              <div className="flex h-full flex-col">
+              <AnimatePresence>
+                {first && (
+                  <ClaudeStrip
+                    key={first.id}
+                    request={first}
+                    index={0}
+                    total={claudeCount}
+                    accent={accent}
+                    open={claudeOpen}
+                    onOpen={setClaudeOpen}
+                    onAnswer={(choice) => claude.answer(first.id, choice)}
+                  />
+                )}
+              </AnimatePresence>
+              <div className="min-h-0 flex-1" hidden={stripAlone}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={view}
@@ -542,6 +610,11 @@ export default function HomePage() {
                       )}
                       {showStatus && <StatusTile privacy={privacy} battery={battery} accent={accent} page={statusPage} onPage={setStatusPage} />}
                       <AiOrbs providers={aiShown} tint={orbTint} />
+                      {nextEvent && (
+                        <p className="absolute bottom-1 left-0 right-0 truncate px-4 text-center text-[11px] text-white/60">
+                          <span className="font-semibold text-white/85">{nextEvent.title || 'Untitled'}</span> {untilText(nextEvent, clock)}
+                        </p>
+                      )}
                     </div>
                     </AloneContext.Provider>
                   ) : view === 'reminder' && ringing ? (
@@ -559,14 +632,12 @@ export default function HomePage() {
                         endRing()
                       }}
                     />
-                  ) : view === 'claude' && claude.requests[0] ? (
-                    <ClaudeView
-                      request={claude.requests[0]}
-                      index={0}
-                      total={claudeCount}
-                      accent={accent}
-                      onAnswer={(choice) => claude.answer(claude.requests[0].id, choice)}
-                    />
+                  ) : view === 'claude' ? (
+                    chatId ? (
+                      <ClaudeChat session={claude.sessions.find((s) => s.id === chatId)} accent={accent} onBack={() => setChatId(null)} />
+                    ) : (
+                      <ClaudeSessions sessions={claude.sessions} enabled={claude.enabled} accent={accent} onSettings={() => setView('settings')} onOpen={setChatId} />
+                    )
                   ) : view === 'done' ? (
                     <DoneView
                       timer={timer}
@@ -590,6 +661,17 @@ export default function HomePage() {
                     />
                   ) : view === 'files' ? (
                     <FileStrip accent={accent} dragging={dragging} onCount={setShelfCount} />
+                  ) : view === 'calendar' ? (
+                    <CalendarView
+                      access={calendar.access}
+                      events={agenda}
+                      now={clock}
+                      accent={accent}
+                      onAllow={() => {
+                        setSettings((s) => ({ ...s, calendarConsent: true }))
+                        void calendar.allow()
+                      }}
+                    />
                   ) : view === 'settings' ? (
                     <SettingsPanel settings={settings} onChange={setSettings} aiLimits={aiLimits} desktimeInstalled={screenTime.installed} />
                   ) : (
@@ -609,11 +691,14 @@ export default function HomePage() {
                   )}
                 </motion.div>
               </AnimatePresence>
+              </div>
+              </div>
             }
           >
-            {(isOpen) =>
-              !isOpen && (
+            {(isOpen, cutout) =>
+              !isOpen && (!cutout || wingsActive || showCompanion) && (
                 <CollapsedStatus
+                  cutout={cutout}
                   nowPlaying={nowPlaying}
                   tasks={tasks}
                   timer={timer}

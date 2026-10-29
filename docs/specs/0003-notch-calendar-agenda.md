@@ -1,7 +1,7 @@
 # 0003. Calendar agenda view on the notch (macOS)
 
 **Date**: 2026-10-29
-**Status**: Proposed
+**Status**: In Progress
 
 ## Summary
 

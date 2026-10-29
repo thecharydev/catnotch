@@ -5,7 +5,7 @@ import { time12 } from '../../lib/time'
 import type { NowPlaying } from '../../hooks/useNowPlaying'
 import type { TaskStore } from '../../hooks/useTasks'
 import type { Timer } from '../../hooks/useTimer'
-import { botAvatarPalette } from 'bot-avatars'
+import { BotAvatar, botAvatarPalette } from 'bot-avatars'
 import type { Avatar } from '../widgets/SettingsPanel'
 import type { ProviderLimits } from '../../hooks/useAiLimits'
 import type { PrivacyState } from '../../hooks/usePrivacy'
@@ -68,6 +68,8 @@ interface CollapsedStatusProps {
   battery?: BatteryState
   /** Something that just happened: the bar gives itself to it for a moment. */
   moment?: Moment | null
+  /** On a notched display, the cutout's width: left and right sit in the wings either side of it. */
+  cutout?: number
 }
 
 /** The tool with a session window (Claude), else the first with any reading:
@@ -217,13 +219,25 @@ const clock = (ms: number) => {
  * music (just the art and a pulse — the title was a status line nobody read),
  * then what is left to do.
  */
-const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avatar, right, screenMs, limits, privacy, battery }) => {
+const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avatar, photo, right, screenMs, limits, privacy, battery, cutout }) => {
   const focusing = timer.isRunning
   const isPlaying = !focusing && Boolean(nowPlaying?.isPlaying)
-  const idle = !focusing && !isPlaying
+  // On a cutout the left wing is for events; the idle time goes to the right.
+  const idle = !focusing && !isPlaying && !cutout
+  // Waiting on a cutout: only the companion shows, the wings are too small for more.
+  const restingOnCutout = Boolean(cutout) && !focusing && !isPlaying
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
+      {/* On a cutout the companion waits in the left wing: DeskNotch is awake. */}
+      {cutout && avatar && !focusing && !isPlaying &&
+        (avatar === 'photo' ? (
+          photo && <img src={photo} alt="" className="h-[18px] w-[18px] shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="grid shrink-0 place-items-center" aria-label="DeskNotch is active">
+            <BotAvatar type={avatar} size={20} theme="dark" />
+          </span>
+        ))}
       {/* Nothing running and nothing playing: the time takes the left. */}
       <AnimatePresence mode="popLayout">
         {idle && (
@@ -297,7 +311,8 @@ const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avat
         )}
       </AnimatePresence>
 
-      <Right right={right} screenMs={screenMs} timeOnLeft={idle} limits={limits} privacy={privacy} battery={battery} />
+      {cutout && <div className="shrink-0" style={{ width: cutout }} />}
+      <Right right={restingOnCutout ? 'time' : right} screenMs={screenMs} timeOnLeft={idle || restingOnCutout} limits={limits} privacy={privacy} battery={battery} />
     </div>
   )
 }
@@ -307,7 +322,7 @@ const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avat
  * the name follows, and after a beat the whole thing slides back out and
  * the usual bar returns.
  */
-const ConnectedMoment: React.FC<{ moment: Moment }> = ({ moment }) => {
+const ConnectedMoment: React.FC<{ moment: Moment; cutout?: number }> = ({ moment, cutout }) => {
   const Icon = MOMENT_ICON[moment.kind]
   return (
   <motion.div
@@ -325,8 +340,9 @@ const ConnectedMoment: React.FC<{ moment: Moment }> = ({ moment }) => {
     >
       <Icon size={14} strokeWidth={2.2} />
     </motion.span>
+    {cutout && <div className="shrink-0" style={{ width: cutout }} />}
     <motion.span
-      className="min-w-0 truncate text-[10.5px] font-semibold text-white/90"
+      className={`min-w-0 truncate text-[10.5px] font-semibold text-white/90 ${cutout ? 'hidden' : ''}`}
       initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: 0.08, duration: 0.2 }}
@@ -352,7 +368,7 @@ const ConnectedMoment: React.FC<{ moment: Moment }> = ({ moment }) => {
 export const CollapsedStatus: React.FC<CollapsedStatusProps> = (props) => (
   <AnimatePresence mode="wait" initial={false}>
     {props.moment ? (
-      <ConnectedMoment key={`${props.moment.kind}:${props.moment.name}`} moment={props.moment} />
+      <ConnectedMoment key={`${props.moment.kind}:${props.moment.name}`} moment={props.moment} cutout={props.cutout} />
     ) : (
       <motion.div
         key="status"

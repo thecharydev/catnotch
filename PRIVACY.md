@@ -17,7 +17,9 @@ DeskNotch reads the following from Windows to show them in the notch. None of it
 - **Screen time**, if you have the separate app ScreenWise installed: DeskNotch reads today's total from ScreenWise's local database.
 - **Glass style**: a live image of the screen area behind the notch, used only to draw the blur. It is processed in memory and never saved or sent.
 
-- **Claude Code popups (optional)**: if you turn this on, DeskNotch listens on `127.0.0.1` only (this PC, never the network) so Claude Code can send it the command or question it is asking about. A secret token in the hook stops anything else from using it. What is shown is held in memory until you answer or 30 seconds pass; it is never saved or sent anywhere. Turning it on adds two entries to Claude's `settings.json` (with a one time backup), and turning it off removes them.
+- **Claude Code popups (optional)**: if you turn this on, DeskNotch listens on `127.0.0.1` only (this PC, never the network) so Claude Code can send it the command or question it is asking about. A secret token in the hook stops anything else from using it. What is shown is held in memory until you answer or 30 seconds pass; it is never saved or sent anywhere. For the Claude tab, DeskNotch also reads the first lines of Claude's own session files on this PC (to learn the folder and whether a session is the terminal or VS Code) and keeps only that in memory. If you click a session to open its chat, DeskNotch reads the recent text of that one session's file and shows it on the notch; it is held in memory while the chat is open and never saved or sent anywhere. A message you send from the chat is passed to your own `claude` program on this PC, like typing it in a terminal. Turning it on adds entries to Claude's `settings.json` (with a one time backup), and turning it off removes them.
+
+- **Calendar (macOS only, optional)**: after you click Allow in the Calendar view, DeskNotch reads the events in your Mac's Calendar app for today and tomorrow (title, time, calendar colour, and any Zoom, Meet or Teams link) to show what is next. It stays in memory on your Mac, is never saved, logged or sent anywhere, and DeskNotch never creates, changes or deletes an event. macOS only offers read and write together as one permission, so the prompt says full access; the promise that we only read is kept by the code. Turn it off any time in Settings, or in System Settings, Privacy, Calendars.
 
 ## What DeskNotch saves
 
@@ -40,4 +42,4 @@ If this policy changes, the new version will be published at this address with a
 
 ## Contact
 
-Questions or concerns: [open an issue on GitHub](https://github.com/yashsrivasta7a/deskNotch/issues).
+Questions or concerns: [open an issue on GitHub](https://github.com/thecharydev/deskNotch/issues).

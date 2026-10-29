@@ -22,4 +22,4 @@ DeskNotch is provided "as is", without warranty of any kind. The authors are not
 6. Changes
 These terms may change with new versions. The current terms are shown each time the installer runs.
 
-Source and contact: https://github.com/yashsrivasta7a/deskNotch
+Source and contact: https://github.com/thecharydev/deskNotch

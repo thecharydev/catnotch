@@ -18,11 +18,19 @@ const PAD_TOP = PAD - BAR_OPEN
 export const CHROME_X = PAD * 2
 export const CHROME_Y = BAR_OPEN + PAD_TOP + PAD
 
+/** On a notched display, how far the closed notch grows past each side of the
+ *  cutout while it has something to say (an icon left, a time or dot right). */
+export const WING = 64
+/** The concave curve where the open panel's neck widens into its body. */
+const FILLET = 12
+
 /** How far past its edge the pointer may drift before the notch lets go. */
 const LEAVE_MARGIN = 48
 /** Past the margin but not moving (a quick flick away, then stillness): how
  *  long before the notch lets go anyway. */
 const AWAY_STILL_MS = 700
+/** After the notch changes size, how long the pointer's distance is not trusted. */
+const SETTLE_MS = 900
 
 /** The notch's spring: snappy, barely overshoots. */
 const spring = { type: 'spring' as const, stiffness: 400, damping: 30 }
@@ -45,7 +53,9 @@ import { Backdrop } from './Backdrop'
 interface NotchChassisProps {
   /** The collapsed bar's content. A function gets the open state, for content
    *  that should step aside once the notch opens. */
-  children?: React.ReactNode | ((isOpen: boolean) => React.ReactNode)
+  children?: React.ReactNode | ((isOpen: boolean, cutout?: number) => React.ReactNode)
+  /** Closed on a notched display: how far to grow a wing out of each side of the cutout. */
+  wings?: number
   /** Rendered only while expanded, below the collapsed bar. */
   expandedContent?: React.ReactNode
   /** Must stay under STRIP_HEIGHT in main.ts, or the window clips it. */
@@ -116,6 +126,18 @@ const Ear: React.FC<{ side: 'left' | 'right'; notchStyle: NotchStyle }> = ({ sid
   )
 }
 
+/**
+ * The open panel on a cutout: a neck as wide as the cutout for its height,
+ * then the full body, joined by concave curves so it reads as one shape.
+ */
+const neckPath = (W: number, H: number, w: number, h: number, R: number) => {
+  const x0 = (W - w) / 2
+  const x1 = x0 + w
+  const r = FILLET
+  const t = 8
+  return `path('M${x0} 0H${x1}V${h - r}A${r} ${r} 0 0 0 ${x1 + r} ${h}H${W - t}A${t} ${t} 0 0 1 ${W} ${h + t}V${H - R}A${R} ${R} 0 0 1 ${W - R} ${H}H${R}A${R} ${R} 0 0 1 0 ${H - R}V${h + t}A${t} ${t} 0 0 1 ${t} ${h}H${x0 - r}A${r} ${r} 0 0 0 ${x0} ${h - r}Z')`
+}
+
 /** Closes deskNotch until it is opened again from the Start menu. */
 const QuitButton: React.FC = () => (
   <RailButton label="Close DeskNotch" onClick={() => window.bridge?.send('app:quit')}>
@@ -132,6 +154,7 @@ const QuitButton: React.FC = () => (
  */
 export const NotchChassis: React.FC<NotchChassisProps> = ({
   children,
+  wings = 0,
   expandedContent,
   expandedWidth = 340,
   expandedHeight = 132,
@@ -146,7 +169,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   tucked = false,
   dockScale = 1,
   className = '',
-  notchStyle = 'black',
+  notchStyle: chosenStyle = 'black',
 }) => {
   const hardware = useHardwareNotch()
   const [isHovered, setIsHovered] = useState(false)
@@ -155,7 +178,14 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   const [isPinned, setIsPinned] = useState(false)
 
   const isOpen = isHovered || isPinned || keepOpen
-  const sliver = tucked && !isOpen
+  // The cutout is black, so closed on one the notch is too, whatever is chosen.
+  const notchStyle: NotchStyle = hardware && !isOpen ? 'black' : chosenStyle
+  // A cutout is already there to hide behind: nothing to tuck.
+  const sliver = tucked && !isOpen && !hardware
+  // Open on a cutout the content starts below it, and the shape has a neck.
+  const topBar = hardware ? hardware.h : BAR_OPEN
+  const shellHeight = expandedHeight + topBar - BAR_OPEN
+  const necked = Boolean(hardware) && isOpen
   // Locked open, the dock and apps bar step away until the pointer is back on
   // the notch, so a pinned notch is just its content. Hovering brings them
   // back, and with them the lock to unpin.
@@ -172,7 +202,10 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   }, [])
 
 
-  const setHover = (over: boolean) => setIsHovered(over)
+  const setHover = (over: boolean) => {
+    console.log('[dbg] setHover', over, new Error().stack?.split('\n')[2]?.trim())
+    setIsHovered(over)
+  }
 
   /** Everything that belongs to the notch: itself, the dock, the apps tray, and
    *  any popover marked `data-notch-part` (the favourites picker). */
@@ -212,6 +245,13 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   // - past it and then still (a flick away): close after AWAY_STILL_MS;
   // - heading back: stay. The notch also changes size under a still pointer
   //   (a smaller view), which is why the edge alone never closes it.
+  // A smaller view moves the dock away from a pointer that has not moved:
+  // not the pointer leaving. Size changes are given a beat to settle.
+  const resizedAt = useRef(0)
+  useEffect(() => {
+    resizedAt.current = Date.now()
+  }, [expandedWidth, expandedHeight])
+
   useEffect(() => {
     if (!isHovered) return
     let last = 0
@@ -219,7 +259,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
     const close = () => setHover(false)
     const unsubscribe = window.bridge?.on<{ x: number; y: number }>('notch:cursor', ({ x, y }) => {
       const d = distance(x, y)
-      if (d <= LEAVE_MARGIN) {
+      console.log('[dbg] cursor d=', Math.round(d), 'last=', Math.round(last), 'away=', Boolean(away), 'sinceResize=', Date.now() - resizedAt.current)
+      if (d <= LEAVE_MARGIN || Date.now() - resizedAt.current < SETTLE_MS) {
         clearTimeout(away)
         away = undefined
       } else if (away && d > last) {
@@ -261,9 +302,18 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       if (!element) return
 
       // The notch, and the dock under it when it is out.
-      const rects = parts()
-        .map((el) => el.getBoundingClientRect())
-        .map((rect) => ({ x: rect.left, y: rect.top, width: rect.width, height: rect.height }))
+      const rects = parts().flatMap((el) => {
+        const r = el.getBoundingClientRect()
+        const whole = { x: r.left, y: r.top, width: r.width, height: r.height }
+        // Open on a cutout the shell's top corners are empty (the menu bar
+        // shows through): only the neck and the body take clicks.
+        if (el !== shellRef.current || !necked || !hardware) return [whole]
+        const x = r.left + (r.width - hardware.w) / 2
+        return [
+          { x, y: r.top, width: hardware.w, height: hardware.h },
+          { x: r.left, y: r.top + hardware.h, width: r.width, height: Math.max(0, r.height - hardware.h) },
+        ]
+      })
       window.bridge?.send('notch:bounds', rects)
     }
 
@@ -284,7 +334,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       clearTimeout(late)
       clearInterval(tick)
     }
-  }, [isOpen, expandedWidth, expandedHeight, dockSide, belowSide])
+  }, [isOpen, expandedWidth, expandedHeight, dockSide, belowSide, hardware, wings])
 
   useEffect(() => {
     window.bridge?.send('notch:pinned', isPinned)
@@ -323,8 +373,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       onDragEnter={onEnter}
       initial={false}
       animate={{
-        width: isOpen ? expandedWidth : hardware?.w ?? 240,
-        height: isOpen ? expandedHeight : sliver ? BAR_TUCKED : hardware?.h ?? BAR_CLOSED,
+        width: isOpen ? expandedWidth : hardware ? hardware.w + 2 * wings : 240,
+        height: isOpen ? shellHeight : sliver ? BAR_TUCKED : hardware?.h ?? BAR_CLOSED,
       }}
       transition={spring}
       // The dock reads these: its buttons and icons grow, its label text does not.
@@ -333,8 +383,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
     >
 
 
-      {!sliver && <Ear side="left" notchStyle={notchStyle} />}
-      {!sliver && <Ear side="right" notchStyle={notchStyle} />}
+      {!sliver && !necked && <Ear side="left" notchStyle={notchStyle} />}
+      {!sliver && !necked && <Ear side="right" notchStyle={notchStyle} />}
 
       <motion.main
         ref={mainRef}
@@ -350,6 +400,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
           borderTopLeftRadius: 0,
           borderTopRightRadius: 0,
           willChange: 'border-radius',
+          clipPath: necked && hardware ? neckPath(expandedWidth, shellHeight, hardware.w, hardware.h, radius.open) : undefined,
           ...(notchStyle === 'black' ? {} : { background: CORNER_FILLS[notchStyle] }),
         }}
       >
@@ -364,12 +415,12 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
           // No click-to-lock here: clicking the bar locked the notch open by
           // surprise. Locking is only the lock button on the dock.
           initial={false}
-          animate={{ height: isOpen ? BAR_OPEN : hardware?.h ?? BAR_CLOSED }}
+          animate={{ height: isOpen ? topBar : hardware?.h ?? BAR_CLOSED }}
           transition={spring}
-          className="shrink-0 flex items-center justify-between px-5 relative"
+          className={`shrink-0 flex items-center justify-between relative ${hardware ? 'px-2' : 'px-5'}`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            {!sliver && (typeof children === 'function' ? children(isOpen) : children)}
+            {!sliver && (typeof children === 'function' ? children(isOpen, hardware?.w) : children)}
           </div>
         </motion.div>
 
@@ -386,7 +437,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
               // laid out and repainted on every frame of the spring.
               className="absolute"
               style={{
-                top: BAR_OPEN,
+                top: topBar,
                 left: '50%',
                 marginLeft: -expandedWidth / 2,
                 width: expandedWidth,
