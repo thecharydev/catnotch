@@ -37,6 +37,12 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 - **Screenshot catcher**: take a screenshot and the notch opens on it: drag it into any app, keep it on the Shelf, rename it, open it, or discard it.
 - **Focus complete**: when a session ends, the notch opens and your companion tells you.
 
+### Claude Code, answered from the notch
+- **Permission popups**: when Claude Code (in the terminal or the VS Code extension) wants to run a command or edit a file, the notch opens on it with the command, the project name and three buttons: **Allow**, **Deny**, or **Ask in terminal**.
+- **Questions**: when Claude asks you a multiple choice question, tap an answer on the notch.
+- **Safe by default**: it never takes keyboard focus, waits 30 seconds, then hands the question back to Claude's own prompt. If DeskNotch is closed, Claude simply asks as usual.
+- **Setup**: Settings, General, **Claude Code popups**. It shows exactly what it will add to `~/.claude/settings.json`, saves a backup the first time, and only ever touches its own two entries. Start a new Claude session after turning it on.
+
 ### Your apps, your way
 - **Apps bar**: Windows' own most-used apps, or your favourites, one tap to open. Four in view, the rest a scroll away.
 

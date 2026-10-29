@@ -50,6 +50,13 @@ Shown when the notch opens. Room for real controls.
 - [ ] **Notification peek**: notifications surface here instead of the corner.
 - [ ] **Laptop temperature & thermals**
 
+## Claude Code popups
+- A local server (`main/ipc/claude.ts`, `127.0.0.1:47821`, secret token) receives Claude Code's `PermissionRequest` hook and its `PreToolUse` hook for `AskUserQuestion`. The notch opens on a request (`ClaudeView`) and the click becomes the hook's reply.
+- Allow, Deny (Claude is told "Denied from DeskNotch"), Ask in terminal, question options with Confirm for multi select. One at a time, "1 of N".
+- Any failure or 30 s of silence is an empty reply, so Claude shows its own prompt. It never takes focus and shows over a fullscreen app while a request waits.
+- Settings, General, Claude Code popups adds and removes only our two hook entries in `settings.json` (`CLAUDE_CONFIG_DIR` honoured), after a preview, with a one time `.deskNotch.bak`.
+- Spec: `docs/specs/0002-claude-code-notch-popup/index.md`.
+
 ## Behaviour
 
 All of these are settings, not hardcoded behaviour.

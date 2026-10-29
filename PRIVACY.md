@@ -17,6 +17,8 @@ DeskNotch reads the following from Windows to show them in the notch. None of it
 - **Screen time**, if you have the separate app ScreenWise installed: DeskNotch reads today's total from ScreenWise's local database.
 - **Glass style**: a live image of the screen area behind the notch, used only to draw the blur. It is processed in memory and never saved or sent.
 
+- **Claude Code popups (optional)**: if you turn this on, DeskNotch listens on `127.0.0.1` only (this PC, never the network) so Claude Code can send it the command or question it is asking about. A secret token in the hook stops anything else from using it. What is shown is held in memory until you answer or 30 seconds pass; it is never saved or sent anywhere. Turning it on adds two entries to Claude's `settings.json` (with a one time backup), and turning it off removes them.
+
 ## What DeskNotch saves
 
 Your settings, tasks, reminders, focus history, the files you put on the Shelf (as file paths) and, if you choose one, your companion photo, are saved in a file on your PC. Uninstalling DeskNotch removes the app; you can delete this file at any time.

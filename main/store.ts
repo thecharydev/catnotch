@@ -26,9 +26,12 @@ export interface StoreShape {
   /** Whether the user let deskNotch read Claude Code's and Codex's logins to
    *  fetch plan limits (ipc/limits.ts). null: not asked yet. */
   aiConsent: boolean | null
+  /** The Claude Code popup (ipc/claude.ts): switched on, the secret its hooks
+   *  send, and the port last used. null: never turned on. */
+  claudeHooks: { enabled: boolean; token: string; port: number } | null
 }
 
-const defaults: StoreShape = { todos: [], settings: {}, photo: null, shelf: [], pins: [], focusLog: [], reminders: [], aiConsent: null }
+const defaults: StoreShape = { todos: [], settings: {}, photo: null, shelf: [], pins: [], focusLog: [], reminders: [], aiConsent: null, claudeHooks: null }
 
 let cache: StoreShape | null = null
 

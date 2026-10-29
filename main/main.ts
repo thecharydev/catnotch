@@ -45,6 +45,9 @@ const createNotchWindow = (bounds: Rect) => {
     // panel floats over other apps without activating DeskNotch.
     type: process.platform === 'darwin' ? 'panel' : 'toolbar',
     alwaysOnTop: true,
+    // macOS pushes a window down below the menu bar (and the cutout); this
+    // stops that clamp so the strip can sit at the very top of the display.
+    enableLargerThanScreen: process.platform === 'darwin',
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.js'),
     },

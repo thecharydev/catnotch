@@ -6,6 +6,8 @@ import { watchHelper } from './mac/helper'
 
 let watcherProcess: ChildProcess | null = null
 let lastRawResult = ''
+/** A Claude Code request is waiting: the notch shows even over a fullscreen app. */
+let claudeWaiting = false
 /** Per notch window id: whether it is tucked up out of a browser's way. */
 const tucked = new Map<number, boolean>()
 
@@ -198,6 +200,13 @@ export function checkAndApplyFullscreenState() {
   handleFullscreenChange(lastRawResult)
 }
 
+/** Shows the notch over a fullscreen app while a Claude request waits, and hides it again after. */
+export function setClaudeWaiting(waiting: boolean) {
+  if (claudeWaiting === waiting) return
+  claudeWaiting = waiting
+  if (lastRawResult) handleFullscreenChange(lastRawResult)
+}
+
 /** Whether this notch is tucked right now, for a renderer that just loaded. */
 export const isTucked = (windowId: number) => tucked.get(windowId) ?? false
 
@@ -224,7 +233,7 @@ function handleFullscreenChange(rawResult: string) {
       const { x, y, width, height } = display.bounds
       onDisplay = monitor[0] < x + width && monitor[2] > x && monitor[1] < y + height && monitor[3] > y
     }
-    const hide = hideOnFullscreen && flag === '1' && onDisplay
+    const hide = hideOnFullscreen && flag === '1' && onDisplay && !claudeWaiting
     if (hide && window.isVisible()) window.hide()
     else if (!hide && !window.isVisible()) restoreWindow(window)
 

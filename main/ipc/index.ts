@@ -12,6 +12,7 @@ import { registerUsageIpc } from './usage'
 import { registerBatteryIpc } from './battery'
 import { registerDisplayIpc } from './display'
 import { registerDesktimeIpc } from './desktime'
+import { registerClaudeIpc } from './claude'
 
 export function registerIpc() {
   registerStoreIpc()
@@ -27,5 +28,6 @@ export function registerIpc() {
   registerBatteryIpc()
   registerDisplayIpc()
   registerDesktimeIpc()
+  registerClaudeIpc()
 }
 

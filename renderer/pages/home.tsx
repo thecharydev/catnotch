@@ -15,6 +15,8 @@ import { CaptureView, CAPTURE_HEIGHT, CAPTURE_WIDTH } from '../components/widget
 import { DoneView, DONE_HEIGHT, DONE_WIDTH } from '../components/widgets/DoneView'
 import { ReminderView, REMINDER_HEIGHT, REMINDER_WIDTH } from '../components/widgets/ReminderView'
 import { useReminders, type Reminder } from '../hooks/useReminders'
+import { ClaudeView, CLAUDE_WIDTH, CLAUDE_PERMISSION_HEIGHT, CLAUDE_QUESTION_HEIGHT } from '../components/widgets/ClaudeView'
+import { useClaude } from '../hooks/useClaude'
 import type { FileItem } from '../hooks/useFiles'
 import { botAvatarPalette } from 'bot-avatars'
 import { CompanionTile, COMPANION_WIDTH, COMPANION_OPEN_WIDTH, COMPANION_REMINDER_WIDTH, COMPANION_TIME_WIDTH, type CompanionMode } from '../components/widgets/CompanionTile'
@@ -388,6 +390,16 @@ export default function HomePage() {
     setCloseKey((k) => k + 1)
   }
 
+  // Claude Code needs an answer: the notch opens on it, whatever it was
+  // showing, and folds once nothing is waiting (the main process drops a
+  // request after 30 s, so a missed one clears itself).
+  const claude = useClaude()
+  const claudeCount = claude.requests.length
+  useEffect(() => {
+    if (claudeCount) peek('claude', 35_000)
+    else if (beforePeek.current !== null && view === 'claude') endRing()
+  }, [claudeCount])
+
   const wasFinished = useRef(timer.finished)
   useEffect(() => {
     const showsTimer = view === 'desk' || (view === 'glance' && showCompanion && companionMode === 'focus')
@@ -438,6 +450,8 @@ export default function HomePage() {
             ? { width: DONE_WIDTH, height: CHROME_Y + DONE_HEIGHT }
           : view === 'reminder'
             ? { width: REMINDER_WIDTH, height: CHROME_Y + REMINDER_HEIGHT }
+          : view === 'claude'
+            ? { width: CLAUDE_WIDTH, height: CHROME_Y + (claude.requests[0]?.kind === 'question' ? CLAUDE_QUESTION_HEIGHT : CLAUDE_PERMISSION_HEIGHT) }
           : SIZES[view]
 
   return (
@@ -474,7 +488,7 @@ export default function HomePage() {
             closeKey={closeKey}
             tucked={tucked}
             dockScale={DOCK_SCALE[settings.dockSize ?? 'default'] ?? 1}
-            rail={view === 'capture' || view === 'done' || view === 'reminder' ? undefined : 
+            rail={view === 'capture' || view === 'done' || view === 'reminder' || view === 'claude' ? undefined : 
               <>
                 <ViewRail views={shownViews} active={view} onChange={setView} />
                 <RailButton
@@ -544,6 +558,14 @@ export default function HomePage() {
                         reminders.remove(ringing.id)
                         endRing()
                       }}
+                    />
+                  ) : view === 'claude' && claude.requests[0] ? (
+                    <ClaudeView
+                      request={claude.requests[0]}
+                      index={0}
+                      total={claudeCount}
+                      accent={accent}
+                      onAnswer={(choice) => claude.answer(claude.requests[0].id, choice)}
                     />
                   ) : view === 'done' ? (
                     <DoneView

@@ -274,6 +274,85 @@ type UpdateState = {
 }
 
 /** Version, update status, and the one thing to do about it. */
+/** Claude Code's permission and question popups: a switch that adds our hooks to Claude's settings.json, after showing exactly what it adds. */
+const ClaudeRow: React.FC = () => {
+  type Status = { enabled: boolean; running: boolean; port: number; configPath: string; valid: boolean }
+  const [status, setStatus] = useState<Status | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [snippet, setSnippet] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const load = () => void window.bridge?.invoke<Status>('claude:status').then(setStatus)
+  React.useEffect(load, [])
+  if (!status) return null
+
+  const turnOn = async () => {
+    setError(null)
+    const result = await window.bridge?.invoke<{ ok: boolean; error?: string }>('claude:enable')
+    setPreview(null)
+    if (result && !result.ok) {
+      setError(result.error ?? 'write')
+      if (result.error === 'invalid') setSnippet((await window.bridge?.invoke<string>('claude:snippet')) ?? null)
+    }
+    load()
+  }
+  const turnOff = async () => {
+    setError(null)
+    setSnippet(null)
+    await window.bridge?.invoke('claude:disable')
+    load()
+  }
+  const small = 'h-[24px] shrink-0 rounded-full px-3 text-[11px] font-medium'
+
+  return (
+    <Row
+      title="Claude Code popups"
+      detail="Allow or deny commands, and answer questions, right on the notch"
+      below={
+        <>
+          {preview && (
+            <div className="rounded-lg bg-black/30 p-2.5">
+              <p className="text-[10.5px] leading-snug text-white/60">
+                This adds two hooks to {status.configPath}. A backup is saved the first time, nothing else in the file changes, and new Claude sessions pick it up.
+              </p>
+              <pre className="mt-1.5 max-h-[90px] overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-white/70">{preview}</pre>
+              <div className="mt-2 flex gap-1.5" onClick={halt}>
+                <button type="button" onClick={turnOn} className={`${small} bg-white text-black`}>Add hooks</button>
+                <button type="button" onClick={() => setPreview(null)} className={`${small} bg-white/[0.08] text-white/75`}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {error && (
+            <p className="text-[10.5px] leading-snug text-white/60">
+              {error === 'invalid'
+                ? `${status.configPath} is not valid JSON, so it was left alone. Add this to it yourself:`
+                : error === 'port'
+                  ? 'No free port was found on this PC.'
+                  : `Couldn't change ${status.configPath}.`}
+            </p>
+          )}
+          {snippet && (
+            <div className="mt-1.5 rounded-lg bg-black/30 p-2.5" onClick={halt}>
+              <pre className="max-h-[90px] overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-white/70">{snippet}</pre>
+              <button type="button" onClick={() => void navigator.clipboard?.writeText(snippet)} className={`${small} mt-2 bg-white/[0.08] text-white/75`}>Copy</button>
+            </div>
+          )}
+        </>
+      }
+    >
+      <Switch
+        label="Claude Code popups"
+        on={status.enabled}
+        onChange={async (on) => {
+          if (!on) return turnOff()
+          setError(null)
+          setSnippet(null)
+          setPreview((await window.bridge?.invoke<string>('claude:preview')) ?? null)
+        }}
+      />
+    </Row>
+  )
+}
+
 const UpdateRow: React.FC = () => {
   const [update, setUpdate] = useState<UpdateState | null>(null)
   React.useEffect(() => {
@@ -652,6 +731,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
       <>
         <Group>
           <UpdateRow />
+        </Group>
+        <Group>
+          <ClaudeRow />
         </Group>
         <Group>
           {store ? (
