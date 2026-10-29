@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { onStoreChange } from '../lib/store'
-export type Task = { id: string; label: string; done: boolean }
+export type Task = { id: string; label: string; done: boolean; due?: string }
+
+/** A Mac local day as YYYY-MM-DD (never toISOString, that is UTC and shifts the day). */
+export const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /**
  * The one copy of the task list.
@@ -12,7 +16,7 @@ export type Task = { id: string; label: string; done: boolean }
 export interface TaskStore {
   tasks: Task[]
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
-  add: (label: string) => void
+  add: (label: string, due?: string) => void
   toggle: (id: string) => void
   remove: (id: string) => void
 }
@@ -41,10 +45,10 @@ export function useTasks(): TaskStore {
     void window.bridge?.invoke('store:set', 'todos', tasks)
   }, [tasks])
 
-  const add = (label: string) => {
+  const add = (label: string, due?: string) => {
     const trimmed = label.trim()
     if (!trimmed) return
-    setTasks((prev) => [...prev, { id: crypto.randomUUID(), label: trimmed, done: false }])
+    setTasks((prev) => [...prev, { id: crypto.randomUUID(), label: trimmed, done: false, ...(due && { due }) }])
   }
 
   const toggle = (id: string) =>

@@ -2,7 +2,7 @@
 <img width="1672" height="941" alt="2416cea1-b2ba-47ae-9ad4-26a41e42804e" src="https://github.com/user-attachments/assets/563721fc-c8a3-4829-b07b-ef03b5b1143d" />
 
 
-**The MacBook notch, reimagined for Windows.**
+**The notch for Windows and macOS.**
 
 DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it opens into your music, a focus timer with a small companion, your tasks, a shelf for files, your AI usage and the apps you use most. Move away, and it folds back out of your way.
 
@@ -46,7 +46,7 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 - **Setup**: Settings, General, **Claude Code on the notch**. It shows exactly what it will add to `~/.claude/settings.json`, saves a backup the first time, and only ever touches its own entries. If you turned it on in an older version, Settings offers **Update hooks**. Start a new Claude session after turning it on.
 
 ### Your calendar on the notch (macOS)
-- **Calendar view**: today and tomorrow from the calendars already in your Mac's Calendar app (Google, iCloud, Outlook), with each calendar's colour, the time, and a **Join** button for Zoom, Meet and Teams links. A line on Home shows what is next ("Standup in 25 min").
+- **Calendar view**: today and tomorrow from the calendars already in your Mac's Calendar app (Google, iCloud, Outlook), with each calendar's colour, the time, and a **Join** button for Zoom, Meet and Teams links. A line on Home shows what is next ("Standup in 25 min"). Birthdays get a cake icon and holidays or festivals from a calendar you cannot edit get a flag, and a day's pane lists them first under "Special days".
 - **Private**: it asks first (only when you click Allow), reads only, and keeps nothing. Switch single calendars off in Settings, Notch, Home cards.
 
 ### Your apps, your way

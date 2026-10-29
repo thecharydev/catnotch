@@ -38,8 +38,8 @@ import { useHeadphones } from '../hooks/useHeadphones'
 import { useBattery } from '../hooks/useBattery'
 import { useNow } from '../hooks/useNow'
 import { useScreenTime } from '../hooks/useScreenTime'
-import { useCalendar, upcoming, nextToday, untilText } from '../hooks/useCalendar'
-import { CalendarView, CALENDAR_WIDTH, CALENDAR_HEIGHT } from '../components/widgets/CalendarView'
+import { useCalendar, upcoming, visible, nextToday, untilText } from '../hooks/useCalendar'
+import { CalendarView, CALENDAR_WIDTH, calendarHeight } from '../components/widgets/CalendarView'
 
 /** The places to go, as circles on the dock. Settings is a control, not a
  *  place, so it sits after them with the lock. */
@@ -55,7 +55,6 @@ const CALENDAR_VIEW: ViewDefinition = { id: 'calendar', label: 'Calendar', icon:
 /** Each view sets the shell it needs; the notch springs between them. */
 const SIZES: Record<string, { width: number; height: number }> = {
   desk: { width: DESK_WIDTH, height: DESK_HEIGHT },
-  calendar: { width: CALENDAR_WIDTH, height: CHROME_Y + CALENDAR_HEIGHT },
   settings: { width: CHROME_X + 620, height: CHROME_Y + SETTINGS_PANE },
 }
 
@@ -374,6 +373,7 @@ export default function HomePage() {
   const calendarOn = isMac && settings.showCalendar
   const calendar = useCalendar(calendarOn, view === 'calendar')
   const clock = useNow()
+  const shownEvents = visible(calendar.events, settings.hiddenCalendarIds ?? [])
   const agenda = upcoming(calendar.events, settings.hiddenCalendarIds ?? [], clock)
   const nextEvent = calendarOn && calendar.access === 'granted' ? nextToday(agenda, clock) : undefined
   // A feature switched off leaves no tab behind.
@@ -497,7 +497,9 @@ export default function HomePage() {
                 height:
                   CHROME_Y + (chatId ? CLAUDE_CHAT_HEIGHT : claudeSessionsHeight(claude.sessions.length)),
               }
-          : SIZES[view]
+          : view === 'calendar'
+            ? { width: CALENDAR_WIDTH, height: CHROME_Y + calendarHeight(calendar.month) }
+            : SIZES[view]
   const stripH = first ? claudeStripHeight(first, claudeOpen) : 0
   const size = !first
     ? baseSize
@@ -665,6 +667,11 @@ export default function HomePage() {
                     <CalendarView
                       access={calendar.access}
                       events={agenda}
+                      shown={shownEvents}
+                      month={calendar.month}
+                      onMonth={calendar.setMonth}
+                      tasks={tasks}
+                      showTasks={settings.showTasks}
                       now={clock}
                       accent={accent}
                       onAllow={() => {

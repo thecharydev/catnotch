@@ -45,6 +45,13 @@ private func declined(_ event: EKEvent) -> Bool {
 }
 
 private let iso = ISO8601DateFormatter()
+private let isoMs: ISO8601DateFormatter = {
+    let f = ISO8601DateFormatter()
+    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return f
+}()
+/// JS sends "...000Z" (with milliseconds); the plain formatter rejects that.
+private func parseDate(_ s: String) -> Date? { isoMs.date(from: s) ?? iso.date(from: s) }
 
 func handleCalendar(_ cmd: String, _ id: Any, _ args: [String: Any]) {
     let granted = calendarAccess() == "granted"
@@ -64,7 +71,7 @@ func handleCalendar(_ cmd: String, _ id: Any, _ args: [String: Any]) {
             ["id": $0.calendarIdentifier, "title": $0.title, "color": hex($0.cgColor), "account": $0.source?.title ?? ""]
         }])
     case "calendarEvents":
-        guard granted, let from = (args["from"] as? String).flatMap(iso.date), let to = (args["to"] as? String).flatMap(iso.date) else {
+        guard granted, let from = (args["from"] as? String).flatMap(parseDate), let to = (args["to"] as? String).flatMap(parseDate) else {
             return emit(["id": id, "status": calendarAccess(), "events": []])
         }
         let found = eventStore.events(matching: eventStore.predicateForEvents(withStart: from, end: to, calendars: nil))
@@ -77,6 +84,7 @@ func handleCalendar(_ cmd: String, _ id: Any, _ args: [String: Any]) {
                 "allDay": $0.isAllDay,
                 "calendarId": $0.calendar.calendarIdentifier,
                 "calendarColor": hex($0.calendar.cgColor),
+                "calendarType": $0.calendar.type == .birthday ? "birthday" : !$0.calendar.allowsContentModifications ? "readonly" : "other",
                 "joinUrl": joinLink($0) as Any? ?? NSNull(),
             ]
         }

@@ -62,8 +62,9 @@ Shown when the notch opens. Room for real controls.
 
 ## Calendar (macOS)
 - The Swift helper (`native/mac/Calendar.swift`) reads the Mac's calendars with EventKit and never writes. `main/ipc/calendar.ts` relays `calendar:*` channels and checks join links (https, Zoom, Meet, Teams) before opening them. Loaded on macOS only.
-- `CalendarView` (a dock view after Files) lists today and tomorrow; Home shows the next event line. Settings: Calendar on or off, and per calendar toggles (`showCalendar`, `hiddenCalendarIds`, `calendarConsent`).
+- `CalendarView` (a dock view after Files) lists today and tomorrow; Home shows the next event line. Click a day in the month grid (arrows move months, dots mark busy days) to see that day's events and tasks, and add, tick or remove tasks there (a task's optional `due` is a local `YYYY-MM-DD`, spec 0008). Settings: Calendar on or off, and per calendar toggles (`showCalendar`, `hiddenCalendarIds`, `calendarConsent`).
 - Access is requested only by the Allow button. Events are held in memory only.
+- Special days (spec 0009): the helper sends `calendarType` (`birthday`, `readonly`, `other`). `kindOf` in `useCalendar.ts` calls a birthday-calendar event a birthday and an all day event of a calendar you cannot edit a holiday. They get a cake or flag icon, no time or Join, and a "Special days" strip and count in the day pane. The helper must be rebuilt for this.
 - Spec: `docs/specs/0003-notch-calendar-agenda.md`.
 
 ## Behaviour

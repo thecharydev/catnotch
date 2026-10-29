@@ -163,7 +163,10 @@ export const ClaudeView: React.FC<{
     setPicked({})
     setTyped({})
   }, [request.id])
-  // The 60 s timer waits while you type; leaving the card hands it back.
+  // The timer waits while you type or have an option picked; leaving the card hands it back.
+  const [focused, setFocused] = useState(false)
+  const working = focused || Object.values(typed).some((v) => v.trim()) || Object.values(picked).some((l) => l.length > 0)
+  useEffect(() => void window.bridge?.invoke('claude:hold', request.id, working, 'type'), [request.id, working])
   useEffect(() => () => void window.bridge?.invoke('claude:hold', request.id, false, 'type'), [request.id])
 
   const button = pill
@@ -202,11 +205,20 @@ export const ClaudeView: React.FC<{
     setTyped({ ...typed, [question.question]: value })
     if (!question.multiSelect && value) setPicked({ ...picked, [question.question]: [] })
   }
-  const hold = (on: boolean) => void window.bridge?.invoke('claude:hold', request.id, on, 'type')
-  const anyTyped = (next: Record<string, string>) => Object.values(next).some((v) => v.trim())
   const release = () => window.bridge?.send('notch:pinned', false)
   return (
-    <div className="flex h-full flex-col justify-center gap-2 px-1" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="flex h-full flex-col justify-center gap-2 px-1"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        // Enter on an action button does its own thing; anywhere else it moves on: next question, then the Send button.
+        if (event.key !== 'Enter' || (event.target as HTMLElement).closest('[data-act]')) return
+        event.preventDefault()
+        if (!ready) return
+        if (!last) setPart(part + 1)
+        else if (all_ready) event.currentTarget.querySelector<HTMLButtonElement>('[data-send]')?.focus()
+      }}
+    >
       {head}
       <p className="max-h-[64px] overflow-auto whitespace-pre-wrap text-[13px] font-semibold leading-snug text-white">
         {question.question}
@@ -234,22 +246,21 @@ export const ClaudeView: React.FC<{
         aria-label="Your own answer"
         spellCheck={false}
         onChange={(event) => type(event.target.value)}
-        onFocus={() => (window.bridge?.send('notch:pinned', true), hold(true))}
-        onBlur={() => (release(), anyTyped(typed) || hold(false))}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && ready) (last ? all_ready : true) && (last ? send() : setPart(part + 1))
-        }}
+        onFocus={() => (window.bridge?.send('notch:pinned', true), setFocused(true))}
+        onBlur={() => (release(), setFocused(false))}
         className="h-[26px] w-full min-w-0 shrink-0 rounded-[8px] border border-white/15 bg-white/[0.08] px-2 text-[11px] text-white outline-none placeholder:text-white/35 focus:border-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
       />
       <div className="flex gap-1.5">
         {part > 0 && (
-          <motion.button whileTap={{ scale: 0.94 }} type="button" className={quiet} onClick={() => setPart(part - 1)}>
+          <motion.button whileTap={{ scale: 0.94 }} type="button" data-act className={quiet} onClick={() => setPart(part - 1)}>
             Back
           </motion.button>
         )}
         <motion.button
           whileTap={{ scale: 0.94 }}
           type="button"
+          data-act
+          data-send={last ? '' : undefined}
           disabled={last ? !all_ready : !ready}
           className={`${button} text-black disabled:opacity-40`}
           style={{ background: accent }}
@@ -257,7 +268,7 @@ export const ClaudeView: React.FC<{
         >
           {last ? 'Send' : 'Next'}
         </motion.button>
-        <motion.button whileTap={{ scale: 0.94 }} type="button" className={`${quiet} ml-auto`} onClick={() => (release(), onAnswer('pass'))}>
+        <motion.button whileTap={{ scale: 0.94 }} type="button" data-act className={`${quiet} ml-auto`} onClick={() => (release(), onAnswer('pass'))}>
           Answer in terminal
         </motion.button>
       </div>
