@@ -2,18 +2,18 @@
 
 _Last updated: 29 September 2026_
 
-CatNotch is a Windows app that shows a notch at the top of your screen. It has no account, no analytics, no advertising and no server of its own. This page explains what it reads, what it keeps, and what, if anything, leaves your PC.
+CatNotch is a Windows and macOS app that shows a notch at the top of your screen. It has no account, no analytics, no advertising and no server of its own. This page explains what it reads, what it keeps, and what, if anything, leaves your PC.
 
 ## What stays on your PC
 
-CatNotch reads the following from Windows to show them in the notch. None of it is sent anywhere.
+CatNotch reads the following from your computer (Windows or macOS) to show them in the notch. None of it is sent anywhere.
 
 - **Media playing**: the title, artist and artwork of what is playing, so you can see and control it.
-- **Microphone and camera in use**: which apps are currently using them, read from Windows' own privacy records. CatNotch never accesses your microphone or camera itself, and never records audio or video.
+- **Microphone and camera in use**: which apps are currently using them, read from the system's own privacy records. CatNotch never accesses your microphone or camera itself, and never records audio or video.
 - **Wi-Fi and Bluetooth**: the name of the network you are connected to, and the names and battery levels of connected Bluetooth devices.
 - **Battery, CPU, GPU and memory use.**
 - **Screenshots**: new images in your Screenshots folder, so the notch can offer them to you. Renaming or discarding one only happens when you ask.
-- **Your most used apps**, from Windows' own list, for the apps bar.
+- **Your most used apps**, from the system's own list, for the apps bar.
 - **Screen time**, if you have the separate app ScreenWise installed: CatNotch reads today's total from ScreenWise's local database.
 - **Glass style**: a live image of the screen area behind the notch, used only to draw the blur. It is processed in memory and never saved or sent.
 

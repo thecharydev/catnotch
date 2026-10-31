@@ -93,7 +93,8 @@ Requires Node.js 20+.
 ```bash
 npm install     # install dependencies
 npm run dev     # run in development, with hot reload
-npm run build   # build the Windows installer into dist/
+npm run build                        # build the Windows installer into dist/
+npm run build -- --mac --universal   # build the macOS app and dmg into dist/
 ```
 
 ### Releasing an update
@@ -112,7 +113,7 @@ Keep `appId` in `electron-builder.yml` unchanged, or an update installs as a sec
 
 ## Privacy
 
-Everything stays on your PC. Media, microphone and camera state, Wi-Fi, Bluetooth, screenshots and app usage are read from Windows locally and never leave it. AI usage is read with the logins Claude Code and Codex already keep on your machine, and those tokens are sent only to their own providers (Anthropic and OpenAI).
+Everything stays on your computer. Media, microphone and camera state, Wi-Fi, Bluetooth, screenshots and app usage are read from your system (Windows or macOS) locally and never leave it. AI usage is read with the logins Claude Code and Codex already keep on your machine, and those tokens are sent only to their own providers (Anthropic and OpenAI).
 
 ## Known limits (beta)
 
