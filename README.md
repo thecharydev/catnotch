@@ -136,8 +136,10 @@ Found a bug or have an idea? [Open an issue](https://github.com/thecharydev/catn
 
 ## Credits
 
+CatNotch is built on [DeskNotch](https://github.com/yashsrivasta7a/deskNotch) by Yash Srivastava (yashsrivasta7a.in), and is developed further by Chary ([thecharydev](https://github.com/thecharydev)).
+
 The notch themes (Mocha, Macchiato, Frappé) use the [Catppuccin](https://github.com/catppuccin/catppuccin) colour palette, and the cat companion is our own drawing of the Catppuccin mascot. Catppuccin is MIT licensed, Copyright (c) 2021 Catppuccin. CatNotch is an independent app and is not affiliated with or endorsed by Catppuccin.
 
 ---
 
-Copyright © 2026 Devezio.tech · App ID `com.devezio.desknotch`
+Copyright © 2026 Yash Srivastava and Chary · App ID `com.devezio.desknotch`
