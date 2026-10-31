@@ -63,6 +63,17 @@ const createNotchWindow = (bounds: Rect) => {
   // so put it at the top edge again now that it is, and whenever it is shown.
   window.setBounds(bounds)
   window.on('show', () => window.setBounds(bounds))
+  // Glass starts a screen capture, and macOS then shifts the strip up by the
+  // cutout's height (taller by as much), so the notch's top slides off screen.
+  // Whenever the frame drifts, put it back on its display's top edge.
+  const pin = () => {
+    const display = screen.getDisplayMatching(window.getBounds())
+    const want = { x: display.bounds.x, y: display.bounds.y, width: display.bounds.width, height: bounds.height }
+    const now = window.getBounds()
+    if (now.x !== want.x || now.y !== want.y || now.width !== want.width || now.height !== want.height) window.setBounds(want)
+  }
+  window.on('move', pin)
+  window.on('resize', pin)
 
   window.setIgnoreMouseEvents(true, { forward: true })
   // A notch made later (a display plugged in) honours Hide in screenshots too.

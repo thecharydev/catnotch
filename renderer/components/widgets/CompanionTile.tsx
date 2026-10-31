@@ -86,7 +86,7 @@ const ReminderMode: React.FC<{ reminders: ReminderStore; accent: string; aim: Ai
                   <span className="block text-[12px] font-semibold tabular-nums leading-tight" style={{ color: r.at <= now ? accent : 'white' }}>
                     {r.at <= now ? `Now · ${whenLabel(r.at)}` : whenLabel(r.at)}
                   </span>
-                  {r.message && <span className="block break-words text-[11px] leading-snug text-white/55">{r.message}</span>}
+                  {r.message && <span className="block break-words text-[11px] leading-snug text-t2">{r.message}</span>}
                 </div>
                 <button
                   type="button"
@@ -95,7 +95,7 @@ const ReminderMode: React.FC<{ reminders: ReminderStore; accent: string; aim: Ai
                     halt(event)
                     reminders.remove(r.id)
                   }}
-                  className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-white/35 opacity-0 transition-opacity hover:bg-white/[0.1] hover:text-white group-hover/r:opacity-100"
+                  className="mt-0.5 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full text-t3 opacity-0 transition-opacity hover:bg-white/[0.1] hover:text-white group-hover/r:opacity-100"
                 >
                   <X size={11} strokeWidth={2.2} />
                 </button>
@@ -103,7 +103,7 @@ const ReminderMode: React.FC<{ reminders: ReminderStore; accent: string; aim: Ai
             ))}
           </div>
         ) : (
-          <span className="mt-1.5 text-[12px] leading-snug text-white/40">None yet. Pick a time on the right.</span>
+          <span className="mt-1.5 text-[12px] leading-snug text-t3">None yet. Pick a time on the right.</span>
         )}
       </div>
     )
@@ -115,12 +115,12 @@ const ReminderMode: React.FC<{ reminders: ReminderStore; accent: string; aim: Ai
       {next ? (
         <div ref={figure} className="mt-1 min-w-0">
           <span className="block text-[24px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-white">{whenLabel(next.at)}</span>
-          <span className="mt-1.5 line-clamp-2 break-words text-[11.5px] leading-snug text-white/55">
+          <span className="mt-1.5 line-clamp-2 break-words text-[11.5px] leading-snug text-t2">
             {next.message || (list.length > 1 ? `+${list.length - 1} more` : 'No message')}
           </span>
         </div>
       ) : (
-        <div ref={figure} className="mt-1.5 flex items-center gap-2 text-white/45">
+        <div ref={figure} className="mt-1.5 flex items-center gap-2 text-t2">
           <BellRing size={15} strokeWidth={2} style={{ color: accent }} />
           <span className="text-[12.5px] leading-snug">Tap to set a reminder</span>
         </div>
@@ -179,7 +179,7 @@ const ReminderForm: React.FC<{ reminders: ReminderStore; accent: string }> = ({ 
         placeholder="Message (optional)"
         onChange={(event) => setMessage(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && set()}
-        className="mt-1.5 h-[26px] rounded-[8px] bg-white/[0.08] px-2 text-[12px] text-white outline-none placeholder:text-white/30 focus:bg-white/[0.12]"
+        className="mt-1.5 h-[26px] rounded-[8px] bg-white/[0.08] px-2 text-[12px] text-white outline-none placeholder:text-t3 focus:bg-white/[0.12]"
       />
       <div className="mt-1.5 flex gap-1">
         {SOON.map((q) => (
@@ -187,7 +187,7 @@ const ReminderForm: React.FC<{ reminders: ReminderStore; accent: string }> = ({ 
             key={q.label}
             type="button"
             onClick={() => setTime(inputTime(q.ms))}
-            className="h-[22px] flex-1 rounded-full bg-white/[0.06] text-[10.5px] font-medium text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white"
+            className="h-[22px] flex-1 rounded-full bg-white/[0.06] text-[10.5px] font-medium text-t2 transition-colors hover:bg-white/[0.12] hover:text-white"
           >
             {q.label}
           </button>
@@ -264,7 +264,7 @@ const TimeMode: React.FC<{ now: Date; accent: string; aim: Aim; expanded: boolea
           {minutes}
         </motion.span>
       </AnimatePresence>
-      <span className="ml-1 text-[11px] font-semibold tracking-normal text-white/45">{meridiem}</span>
+      <span className="ml-1 text-[11px] font-semibold tracking-normal text-t2">{meridiem}</span>
     </div>
   )
 
@@ -274,10 +274,10 @@ const TimeMode: React.FC<{ now: Date; accent: string; aim: Aim; expanded: boolea
     return (
       <div className="min-w-0">
         {clock}
-        <span className="mt-1.5 block text-[11px] font-semibold leading-none text-white/80">
+        <span className="mt-1.5 block text-[11px] font-semibold leading-none text-t1">
           {now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
         </span>
-        <span className="mt-1.5 flex items-center gap-1 text-[10.5px] font-medium leading-none text-white/50">
+        <span className="mt-1.5 flex items-center gap-1 text-[10.5px] font-medium leading-none text-t2">
           <span ref={glyph} style={{ color: up ? accent : 'rgba(255,255,255,0.7)' }}>
             {up ? <Sun size={10} strokeWidth={2.4} /> : <Moon size={10} strokeWidth={2.4} />}
           </span>
@@ -292,8 +292,8 @@ const TimeMode: React.FC<{ now: Date; accent: string; aim: Aim; expanded: boolea
         {clock}
         {/* The date belongs with the time, stacked beside it. */}
         <div className="flex flex-col gap-[3px] leading-none">
-          <span className="text-[11px] font-semibold text-white/80">{now.toLocaleDateString(undefined, { weekday: 'long' })}</span>
-          <span className="text-[10.5px] font-medium text-white/40">{now.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+          <span className="text-[11px] font-semibold text-t1">{now.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+          <span className="text-[10.5px] font-medium text-t3">{now.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
         </div>
       </div>
 
@@ -342,7 +342,7 @@ const TimeMode: React.FC<{ now: Date; accent: string; aim: Aim; expanded: boolea
         </g>
       </svg>
 
-      <span className="mt-1.5 block text-[10.5px] font-medium leading-none text-white/50">{note}</span>
+      <span className="mt-1.5 block text-[10.5px] font-medium leading-none text-t2">{note}</span>
     </div>
   )
 }
@@ -363,7 +363,7 @@ const ScreenMode: React.FC<{ ms: number | null; aim: Aim }> = ({ ms, aim }) => {
       <span ref={figure} className="mt-1 block text-[28px] font-semibold leading-none tracking-[-0.04em] tabular-nums text-white">
         {ms == null ? '—' : formatScreenTime(ms)}
       </span>
-      <ScrollingText className="mt-2 text-[10.5px] leading-none text-white/40">Today, from ScreenWise</ScrollingText>
+      <ScrollingText className="mt-2 text-[10.5px] leading-none text-t3">Today, from ScreenWise</ScrollingText>
     </div>
   )
 }
@@ -474,7 +474,7 @@ const FocusMode: React.FC<{ timer: Timer; minutes: number; accent: string; open:
             }}
             animate={{ rotate: open ? 180 : 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="ml-1 grid h-[22px] w-[18px] place-items-center text-white/35 transition-colors hover:text-white"
+            className="ml-1 grid h-[22px] w-[18px] place-items-center text-t3 transition-colors hover:text-white"
           >
             <ChevronRight size={13} strokeWidth={2.2} />
           </motion.button>
@@ -509,7 +509,7 @@ const FocusMode: React.FC<{ timer: Timer; minutes: number; accent: string; open:
               stop_(event)
               reset()
             }}
-            className="grid h-[22px] w-[22px] place-items-center rounded-full bg-white/[0.08] text-white/50 transition-colors hover:bg-white/[0.14] hover:text-white"
+            className="grid h-[22px] w-[22px] place-items-center rounded-full bg-white/[0.08] text-t2 transition-colors hover:bg-white/[0.14] hover:text-white"
           >
             <RotateCcw size={11} strokeWidth={2.2} />
           </button>
@@ -792,7 +792,7 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
                 ] as const
               ).map(([unit, value, setValue, digits], i) => (
                 <React.Fragment key={unit}>
-                  {i === 1 && <span className="text-[13px] font-semibold text-white/30">:</span>}
+                  {i === 1 && <span className="text-[13px] font-semibold text-t3">:</span>}
                   <input
                     value={value}
                     inputMode="numeric"
@@ -809,7 +809,7 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
                         setCustomSec('')
                       }
                     }}
-                    className="h-[26px] w-[46px] rounded-[8px] bg-white/[0.06] text-center text-[13px] font-semibold tabular-nums text-white outline-none transition-colors placeholder:text-[10px] placeholder:font-medium placeholder:text-white/30 focus:bg-white/[0.1]"
+                    className="h-[26px] w-[46px] rounded-[8px] bg-white/[0.06] text-center text-[13px] font-semibold tabular-nums text-white outline-none transition-colors placeholder:text-[10px] placeholder:font-medium placeholder:text-t3 focus:bg-white/[0.1]"
                   />
                 </React.Fragment>
               ))}

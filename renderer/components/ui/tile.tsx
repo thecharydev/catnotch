@@ -82,7 +82,7 @@ export const Tile: React.FC<TileProps> = ({ width, height = TILE, glow, tinted, 
       initial={false}
       animate={{ width }}
       transition={spring}
-      className={`shrink-0 ${clip ? 'overflow-hidden' : 'overflow-visible'} rounded-[24px] p-3.5 text-left ${alone ? 'relative' : tinted ? 'frost' : 'frost frost-thin'}
+      className={`shrink-0 ${clip ? 'overflow-hidden' : 'overflow-visible'} rounded-[calc(var(--radius-notch-open)-14px)] p-3.5 text-left ${alone ? 'relative' : tinted ? 'frost' : 'frost frost-thin'}
                   ${onClick ? 'cursor-pointer' : ''} ${className}`}
       style={{ height, background: face, transition: 'background 200ms ease' }}
     >
@@ -93,7 +93,7 @@ export const Tile: React.FC<TileProps> = ({ width, height = TILE, glow, tinted, 
 
 /** The tiny caption every card uses. */
 export const TileLabel: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <span className={`block text-[8.5px] font-bold uppercase tracking-[0.12em] leading-none text-white/35 ${className}`}>
+  <span className={`block text-[8.5px] font-bold uppercase tracking-[0.12em] leading-none text-t3 ${className}`}>
     {children}
   </span>
 )

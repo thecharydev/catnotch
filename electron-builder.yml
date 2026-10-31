@@ -63,6 +63,10 @@ mac:
     - from: native/mac/build/mediaremote
       to: mediaremote
   identity: "-"
+  # The hardened runtime makes macOS refuse the Calendar and Location prompts
+  # unless the app carries their entitlements. An ad hoc build is never
+  # notarized, so the runtime buys nothing; leave it off and the prompts show.
+  hardenedRuntime: false
   extendInfo:
     LSUIElement: true
     # macOS reads these from the app that is responsible for the helper (this

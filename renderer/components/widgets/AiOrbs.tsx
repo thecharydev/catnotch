@@ -45,7 +45,7 @@ const Retry: React.FC<{ name: string; error: 'expired' | 'unavailable' }> = ({ n
   return (
     <Tile width={providerWidth({ name, error })} onClick={retry} label={`Check ${name} again`} className="group/retry">
       <div className="flex h-full flex-col items-center justify-center gap-2">
-        <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white/[0.07] text-white/60 transition-colors group-hover/retry:bg-white/[0.12] group-hover/retry:text-white">
+        <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white/[0.07] text-t2 transition-colors group-hover/retry:bg-white/[0.12] group-hover/retry:text-white">
           <motion.span
             animate={{ rotate: busy ? 360 : 0 }}
             transition={busy ? { duration: 0.7, repeat: Infinity, ease: 'linear' } : { duration: 0 }}
@@ -55,8 +55,8 @@ const Retry: React.FC<{ name: string; error: 'expired' | 'unavailable' }> = ({ n
           </motion.span>
         </span>
         <span className="flex flex-col items-center gap-[3px] leading-none">
-          <span className="text-[11px] font-medium text-white/70">{name}</span>
-          <span className="text-[9.5px] text-white/35">{busy ? 'Checking…' : error === 'expired' ? 'Sign in again' : 'Tap to retry'}</span>
+          <span className="text-[11px] font-medium text-t1">{name}</span>
+          <span className="text-[9.5px] text-t3">{busy ? 'Checking…' : error === 'expired' ? 'Sign in again' : 'Tap to retry'}</span>
         </span>
       </div>
     </Tile>

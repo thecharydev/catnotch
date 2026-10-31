@@ -133,14 +133,14 @@ export const MediaTile: React.FC<{ media: NowPlaying; tint: string }> = ({ media
           {/* Where it is playing, and that it is: the source, with the bars. */}
           <div className="mb-1 flex items-center gap-1.5">
             <Bars playing={media.isPlaying} color={`rgb(${tint})`} />
-            <span className="truncate text-[8.5px] font-bold uppercase leading-none tracking-[0.12em] text-white/40">
+            <span className="truncate text-[8.5px] font-bold uppercase leading-none tracking-[0.12em] text-t3">
               {media.isPlaying ? playerName(media.sourceAppId) : `Paused · ${playerName(media.sourceAppId)}`}
             </span>
           </div>
           <ScrollingText className="text-[14px] font-semibold leading-tight tracking-[-0.01em] text-white">
             {media.title}
           </ScrollingText>
-          <span className="mt-0.5 block truncate text-[11.5px] leading-tight text-white/50">{media.artist}</span>
+          <span className="mt-0.5 block truncate text-[11.5px] leading-tight text-t2">{media.artist}</span>
         </div>
         <div>
           {/* Where the track is: a line, not a scrubber; this is a glance. */}
@@ -177,7 +177,7 @@ export const TimeTile: React.FC = () => {
         <span className="mt-2 block text-[32px] font-semibold leading-none tracking-[-0.04em] text-white">
           {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}
         </span>
-        <span className="mt-2 block text-[11.5px] font-medium leading-none text-white/50">
+        <span className="mt-2 block text-[11.5px] font-medium leading-none text-t2">
           {now.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
         </span>
       </div>
@@ -217,7 +217,7 @@ export const TaskTile: React.FC<{ tasks: TaskStore; accent: string }> = ({ tasks
               {adding ? 'New task' : 'Tasks'}
             </span>
             {!adding && open.length > 0 && (
-              <span className="text-[12px] font-semibold tabular-nums text-white/30">{open.length}</span>
+              <span className="text-[12px] font-semibold tabular-nums text-t3">{open.length}</span>
             )}
           </span>
           {!adding && (
@@ -229,7 +229,7 @@ export const TaskTile: React.FC<{ tasks: TaskStore; accent: string }> = ({ tasks
                 event.stopPropagation()
                 setAdding(true)
               }}
-              className="-mr-1 grid h-[20px] w-[20px] place-items-center rounded-full text-white/40 transition-colors hover:bg-white/[0.1] hover:text-white"
+              className="-mr-1 grid h-[20px] w-[20px] place-items-center rounded-full text-t3 transition-colors hover:bg-white/[0.1] hover:text-white"
             >
               <Plus size={12} strokeWidth={2.4} />
             </motion.button>
@@ -247,7 +247,7 @@ export const TaskTile: React.FC<{ tasks: TaskStore; accent: string }> = ({ tasks
             <span className="grid h-[26px] w-[26px] place-items-center rounded-full" style={{ background: accent }}>
               <Check size={14} strokeWidth={3} className="text-black" />
             </span>
-            <span className="text-[12.5px] font-medium text-white/80">All done</span>
+            <span className="text-[12.5px] font-medium text-t1">All done</span>
           </motion.div>
         ) : (
           <div className="-mr-1 flex min-h-0 flex-1 flex-col overflow-y-auto pr-1 [scrollbar-width:none]">
@@ -284,7 +284,7 @@ export const TaskTile: React.FC<{ tasks: TaskStore; accent: string }> = ({ tasks
                     {/* Long tasks wrap as a paragraph; ticked, the text is struck through on every line. */}
                     <span
                       className={`min-w-0 break-words text-[12.5px] leading-snug transition-colors duration-200 ${
-                        done ? 'text-white/35 line-through decoration-white/45' : 'text-white/85'
+                        done ? 'text-t3 line-through decoration-white/45' : 'text-t1'
                       }`}
                     >
                       {task.label}
@@ -294,7 +294,7 @@ export const TaskTile: React.FC<{ tasks: TaskStore; accent: string }> = ({ tasks
               })}
             </AnimatePresence>
             {open.length > SHOWN && (
-              <span className="mt-0.5 pl-[23px] text-[11px] font-medium text-white/30">{open.length - SHOWN} more</span>
+              <span className="mt-0.5 pl-[23px] text-[11px] font-medium text-t3">{open.length - SHOWN} more</span>
             )}
           </div>
         )}

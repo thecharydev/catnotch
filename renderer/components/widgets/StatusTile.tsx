@@ -45,10 +45,10 @@ const Row: React.FC<{ icon: React.ReactNode; color: string; name: string; note: 
     >
       {icon}
     </span>
-    <ScrollingText className="min-w-0 flex-1 text-[12px] font-medium leading-none text-white/90">
+    <ScrollingText className="min-w-0 flex-1 text-[12px] font-medium leading-none text-t1">
       {name}
     </ScrollingText>
-    <span className="shrink-0 text-[9.5px] font-semibold tracking-wider uppercase text-white/40">{note}</span>
+    <span className="shrink-0 text-[9.5px] font-semibold tracking-wider uppercase text-t3">{note}</span>
   </motion.div>
 )
 
@@ -124,7 +124,7 @@ const UsagePage: React.FC<{ accent: string }> = ({ accent }) => {
           ))}
         </svg>
         <div className="absolute grid place-items-center text-center">
-          <Activity size={12} className="text-white/40 animate-pulse" />
+          <Activity size={12} className="text-t3 animate-pulse" />
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
@@ -134,7 +134,7 @@ const UsagePage: React.FC<{ accent: string }> = ({ accent }) => {
               className="h-[6px] w-[6px] shrink-0 rounded-full"
               style={{ background: shade(accent, reading.shade), boxShadow: `0 0 6px ${shade(accent, reading.shade)}` }}
             />
-            <span className="min-w-0 flex-1 truncate text-[8.5px] font-bold uppercase leading-none tracking-[0.08em] text-white/50">
+            <span className="min-w-0 flex-1 truncate text-[8.5px] font-bold uppercase leading-none tracking-[0.08em] text-t2">
               {reading.label}
             </span>
             <span
@@ -206,7 +206,7 @@ export const StatusTile: React.FC<{
                   e.stopPropagation()
                   onPage('now')
                 }}
-                className={`relative z-10 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${activeFace === 'now' ? 'text-white' : 'text-white/40 hover:text-white/70'
+                className={`relative z-10 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${activeFace === 'now' ? 'text-white' : 'text-t3 hover:text-t1'
                   }`}
               >
                 {activeFace === 'now' && (
@@ -224,7 +224,7 @@ export const StatusTile: React.FC<{
                   e.stopPropagation()
                   onPage('usage')
                 }}
-                className={`relative z-10 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${activeFace === 'usage' ? 'text-white' : 'text-white/40 hover:text-white/70'
+                className={`relative z-10 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-colors ${activeFace === 'usage' ? 'text-white' : 'text-t3 hover:text-t1'
                   }`}
               >
                 {activeFace === 'usage' && (
@@ -243,7 +243,7 @@ export const StatusTile: React.FC<{
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/50">System Usage</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-t2">System Usage</span>
             </div>
           )}
         </div>

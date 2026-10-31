@@ -94,6 +94,7 @@ interface NotchChassisProps {
  *  the dock and apps tray: the surface's own colour, solid. */
 const CORNER_FILLS: Record<NotchStyle, string> = {
   black: '#000000',
+  transparent: 'rgb(20, 20, 24)',
   glass: 'rgb(20, 20, 24)',
 }
 
@@ -168,8 +169,10 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   const [isPinned, setIsPinned] = useState(false)
 
   const isOpen = isHovered || isPinned || keepOpen
-  // The cutout is black, so closed on one the notch is too, whatever is chosen.
-  const notchStyle: NotchStyle = hardware && !isOpen ? 'black' : chosenStyle
+  // The cutout is black, so closed on one with nothing beside it the notch is
+  // too, whatever is chosen. With wings, the wings show the style and a black
+  // block covers the cutout itself.
+  const notchStyle: NotchStyle = hardware && !isOpen && wings === 0 ? 'black' : chosenStyle
   // A cutout is already there to hide behind: nothing to tuck.
   const sliver = tucked && !isOpen && !hardware
   // Open on a cutout the content starts below it, and the shape has a neck.
@@ -370,6 +373,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
 
       <motion.main
         ref={mainRef}
+        data-notch-style={notchStyle}
         initial={false}
         animate={{
           borderBottomLeftRadius: isOpen ? radius.open : radius.closed,
@@ -387,6 +391,19 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
       >
         {/* Glass: what the surface shows through, open or closed. */}
         {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={mainRef} />}
+        {hardware && notchStyle !== 'black' && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 bg-black"
+            // The real notch's bottom corners are curved: a square block would poke out of them.
+            style={{
+              width: hardware.w + 2 * CUTOUT_BLEED,
+              height: hardware.h,
+              borderBottomLeftRadius: radius.closed,
+              borderBottomRightRadius: radius.closed,
+            }}
+          />
+        )}
 
         {ambient?.(isOpen)}
 

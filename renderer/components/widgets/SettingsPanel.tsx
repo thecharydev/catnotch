@@ -16,7 +16,7 @@ const spring = { type: 'spring' as const, stiffness: 420, damping: 34 }
 export const SETTINGS_PANE = 312
 
 /** Default, a soft charcoal notch; Glass, a live blur of what is behind. */
-export type NotchStyle = 'black' | 'glass'
+export type NotchStyle = 'black' | 'transparent' | 'glass'
 
 /** A bot, or the user's own photo. */
 export type Avatar = BotAvatarType | 'photo'
@@ -759,19 +759,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
         <Group>
           <Row
             title="Style"
-            detail={glassNote ? 'Glass needs Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
+            detail={glassNote ? 'Transparent and Glass need Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
           >
             <Segmented
               id="style"
               options={[
                 { id: 'black', label: 'Default' },
+                { id: 'transparent', label: 'Transparent' },
                 { id: 'glass', label: 'Glass' },
               ] as const}
               value={settings.notchStyle}
               onChange={async (v) => {
                 setGlassNote(false)
                 // Glass can need a permission first; without it, the style stays Default.
-                if (v === 'glass' && (await window.bridge?.invoke<boolean>('glass:permission')) === false) return setGlassNote(true)
+                if (v !== 'black' && (await window.bridge?.invoke<boolean>('glass:permission')) === false) return setGlassNote(true)
                 set('notchStyle', v)
               }}
             />
@@ -819,12 +820,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               so under Glass this is on and cannot be turned off. */}
           <Row
             title="Hide in screenshots"
-            detail={settings.notchStyle === 'glass' ? 'Always on with Glass' : 'Also screen recordings and sharing'}
+            detail={settings.notchStyle !== 'black' ? 'Always on with Glass' : 'Also screen recordings and sharing'}
           >
             <Switch
               label="Hide in screenshots"
-              on={settings.notchStyle === 'glass' || (settings.hideInScreenshots ?? false)}
-              disabled={settings.notchStyle === 'glass'}
+              on={settings.notchStyle !== 'black' || (settings.hideInScreenshots ?? false)}
+              disabled={settings.notchStyle !== 'black'}
               onChange={(v) => set('hideInScreenshots', v)}
             />
           </Row>

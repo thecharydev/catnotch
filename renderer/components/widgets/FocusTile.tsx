@@ -81,7 +81,7 @@ export const FocusTile: React.FC<{ timer: Timer; tasks?: TaskStore; minutes: num
                       }}
                       className="group grid h-[13px] w-[13px] shrink-0 place-items-center rounded-full border border-white/35 transition-colors hover:border-white hover:bg-white/20"
                     />
-                    <span className="truncate text-[11.5px] leading-none text-white/65">{next.label}</span>
+                    <span className="truncate text-[11.5px] leading-none text-t2">{next.label}</span>
                   </>
                 ) : adding ? (
                   <QuickAdd tasks={tasks} onDone={() => setAdding(false)} className="!text-[11.5px]" />
@@ -92,7 +92,7 @@ export const FocusTile: React.FC<{ timer: Timer; tasks?: TaskStore; minutes: num
                       event.stopPropagation()
                       setAdding(true)
                     }}
-                    className="flex items-center gap-1 text-[11px] leading-none text-white/35 transition-colors hover:text-white"
+                    className="flex items-center gap-1 text-[11px] leading-none text-t3 transition-colors hover:text-white"
                   >
                     <Plus size={11} strokeWidth={2.2} />
                     Add a task
@@ -101,7 +101,7 @@ export const FocusTile: React.FC<{ timer: Timer; tasks?: TaskStore; minutes: num
               </motion.div>
             </AnimatePresence>
           ) : (
-            <span className="text-[11px] leading-none text-white/35">
+            <span className="text-[11px] leading-none text-t3">
               {isRunning ? 'tap to pause' : paused ? 'tap to resume' : 'tap to start'}
             </span>
           )}
