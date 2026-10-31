@@ -1,25 +1,28 @@
-﻿DeskNotch - Terms of Use
+﻿CatNotch - Terms of Use
 
-Copyright (c) 2026 yashsrivasta7a.in. Please read these terms before installing. By clicking "I Agree" you accept them. If you do not agree, click Cancel and DeskNotch will not be installed.
+Copyright (c) 2026 yashsrivasta7a.in. Please read these terms before installing. By clicking "I Agree" you accept them. If you do not agree, click Cancel and CatNotch will not be installed.
 
-1. What DeskNotch does
-DeskNotch shows a notch at the top of your screen with music controls, tasks, reminders, a focus timer, files, screen time and AI usage limits.
+1. What CatNotch does
+CatNotch shows a notch at the top of your screen with music controls, tasks, reminders, a focus timer, files, screen time and AI usage limits.
 
 2. Data on your PC
-Your tasks, settings, reminders and pinned files are stored only on this PC, in DeskNotch's own data folder. DeskNotch has no account and no server of its own.
+Your tasks, settings, reminders and pinned files are stored only on this PC, in CatNotch's own data folder. CatNotch has no account and no server of its own.
 
 3. Other services
-DeskNotch can show your Claude Code and Codex plan limits. Before it does, it asks for your permission. With your permission, it reads the sign-in those tools already keep on this PC and sends it only to their own provider (Anthropic or OpenAI) to fetch your usage. It is not stored elsewhere or sent anywhere else. You can withdraw permission at any time by switching AI usage off in Settings.
-Your use of Claude Code, Codex, ScreenWise or any other service stays under that service's own terms. DeskNotch is not made, endorsed or supported by Anthropic, OpenAI or any of them.
-If ScreenWise is installed, DeskNotch reads its local database, read-only, to show today's screen time.
+CatNotch can show your Claude Code and Codex plan limits. Before it does, it asks for your permission. With your permission, it reads the sign-in those tools already keep on this PC and sends it only to their own provider (Anthropic or OpenAI) to fetch your usage. It is not stored elsewhere or sent anywhere else. You can withdraw permission at any time by switching AI usage off in Settings.
+Your use of Claude Code, Codex, ScreenWise or any other service stays under that service's own terms. CatNotch is not made, endorsed or supported by Anthropic, OpenAI or any of them.
+If ScreenWise is installed, CatNotch reads its local database, read-only, to show today's screen time.
 
 4. Updates
 The version from GitHub checks GitHub for updates, downloads them and installs them by itself.
 
 5. No warranty
-DeskNotch is provided "as is", without warranty of any kind. The authors are not liable for any claim, damage or loss arising from its use, to the extent the law allows.
+CatNotch is provided "as is", without warranty of any kind. The authors are not liable for any claim, damage or loss arising from its use, to the extent the law allows.
 
 6. Changes
 These terms may change with new versions. The current terms are shown each time the installer runs.
 
-Source and contact: https://github.com/thecharydev/deskNotch
+7. Credits
+The notch themes use the Catppuccin colour palette and the cat companion is drawn after the Catppuccin mascot. Catppuccin is MIT licensed, Copyright (c) 2021 Catppuccin (https://github.com/catppuccin/catppuccin). CatNotch is not affiliated with or endorsed by Catppuccin.
+
+Source and contact: https://github.com/thecharydev/catnotch

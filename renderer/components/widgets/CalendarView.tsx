@@ -226,7 +226,7 @@ const Events: React.FC<{
       <Message
         accent={accent}
         text="Show your calendar here"
-        note="DeskNotch reads the events in your Mac's Calendar app to show what is next. It stays on your Mac and never changes anything."
+        note="CatNotch reads the events in your Mac's Calendar app to show what is next. It stays on your Mac and never changes anything."
         action="Allow"
         onAction={onAllow}
       />

@@ -28,8 +28,8 @@ export function openSettingsWindow() {
     resizable: false,
     fullscreenable: false,
     minimizable: true,
-    // Not exactly "DeskNotch": fullscreen.ts finds the notch by that title.
-    title: 'DeskNotch Settings',
+    // Not exactly "CatNotch": fullscreen.ts finds the notch by that title.
+    title: 'CatNotch Settings',
     show: false,
     ...(isMac
       ? {

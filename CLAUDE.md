@@ -1,11 +1,11 @@
-# DeskNotch
+# CatNotch
 
 A notch style bar at the top of the screen (macOS and Windows) built with Electron and Next.js (via nextron). Hover it and it opens into music, a focus timer, tasks, a file shelf, AI usage, a calendar and Claude Code prompts. Version and release details are in `package.json` and `README.md`.
 
 ## Run, build, test
 
 - `npm run dev`: run the app in development.
-- `npm run build -- --mac --universal`: build the mac app into `dist/mac-universal/DeskNotch.app`.
+- `npm run build -- --mac --universal`: build the mac app into `dist/mac-universal/CatNotch.app`.
 - `npm run build:helper`: rebuild the native Swift helper (`native/mac`).
 - `npm test`: run vitest once.
 

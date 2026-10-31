@@ -81,7 +81,7 @@ public class FullscreenCheck {
 
         StringBuilder title = new StringBuilder(256);
         GetWindowText(hwnd, title, 256);
-        if (title.ToString() == "DeskNotch") return "self";
+        if (title.ToString() == "CatNotch") return "self";
 
         IntPtr hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
         MONITORINFO mi = new MONITORINFO();

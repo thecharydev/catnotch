@@ -1,12 +1,12 @@
-# DeskNotch
-<img width="1672" height="941" alt="2416cea1-b2ba-47ae-9ad4-26a41e42804e" src="https://github.com/user-attachments/assets/563721fc-c8a3-4829-b07b-ef03b5b1143d" />
+# CatNotch
+<img src="docs/images/desknotch-screenshot.png" alt="CatNotch open on a Mac, showing the cat companion, now playing and AI usage" width="100%">
 
 
 **The notch for Windows and macOS.**
 
-DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it opens into your music, a focus timer with a small companion, your tasks, a shelf for files, your AI usage and the apps you use most. Move away, and it folds back out of your way.
+CatNotch sits at the top centre of your screen as a slim bar. Hover it, and it opens into your music, a focus timer with a small companion, your tasks, a shelf for files, your AI usage and the apps you use most. Move away, and it folds back out of your way.
 
-> **Beta.** DeskNotch is in public testing. Things may break; [feedback](#feedback) is very welcome.
+> **Beta.** CatNotch is in public testing. Things may break; [feedback](#feedback) is very welcome.
 
 ---
 
@@ -42,7 +42,7 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 - **Questions**: when Claude asks you a question, read all of it on the notch, then tap an option or type your own answer.
 - **Claude tab**: lists every Claude Code session on your PC, in the terminal or in VS Code, with a CLI or VS Code badge and whether it is working, idle or waiting for you. Sessions already open show up within about 20 seconds.
 - **Chat**: click a session in the Claude tab to read its conversation (your messages and Claude's replies, tool calls as short "Ran Bash" lines) and type a message to it. The reply appears on the notch. Sending is blocked while that session is busy in its own window, and the terminal or VS Code window that has it open won't update live. It needs the `claude` program on this PC.
-- **Safe by default**: it takes keyboard focus only when you click the answer box, waits 60 seconds, then hands the question back to Claude's own prompt. If DeskNotch is closed, Claude simply asks as usual.
+- **Safe by default**: it takes keyboard focus only when you click the answer box, waits 60 seconds, then hands the question back to Claude's own prompt. If CatNotch is closed, Claude simply asks as usual.
 - **Setup**: Settings, General, **Claude Code on the notch**. It shows exactly what it will add to `~/.claude/settings.json`, saves a backup the first time, and only ever touches its own entries. If you turned it on in an older version, Settings offers **Update hooks**. Start a new Claude session after turning it on.
 
 ### Your calendar on the notch (macOS)
@@ -61,7 +61,7 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 
 ## Install
 
-1. Download the latest `DeskNotch Setup.exe` from [**Releases**](https://github.com/thecharydev/deskNotch/releases).
+1. Download the latest `CatNotch Setup.exe` from [**Releases**](https://github.com/thecharydev/catnotch/releases).
 2. Run it. The beta is not code-signed yet, so Windows may show **"Windows protected your PC"**: click **More info**, then **Run anyway**.
 3. A slim bar appears at the top centre of your screen. Hover it to open; Settings is the gear icon on the dock.
 
@@ -69,22 +69,20 @@ DeskNotch sits at the top centre of your screen as a slim bar. Hover it, and it 
 
 ## Install on macOS
 
-Requires macOS 13 or newer. On a MacBook with a notch, DeskNotch wraps the real notch. On any other screen it shows the same pill as Windows.
+Requires macOS 13 or newer. On a MacBook with a notch, CatNotch wraps the real notch. On any other screen it shows the same pill as Windows.
 
-**With Homebrew (recommended):**
+[![Download for macOS](https://img.shields.io/github/v/release/thecharydev/catnotch?label=Download%20for%20macOS&logo=apple&style=for-the-badge)](https://github.com/thecharydev/catnotch/releases/latest/download/CatNotch.dmg)
 
-```bash
-brew install --cask <owner>/desknotch/desknotch
-```
+1. Download [**CatNotch.dmg**](https://github.com/thecharydev/catnotch/releases/latest/download/CatNotch.dmg) (universal: Apple silicon and Intel). Older versions are on [Releases](https://github.com/thecharydev/catnotch/releases).
+2. Open it and drag CatNotch to Applications.
+3. The build is not notarized (that needs a paid Apple account), so the first open is blocked. Open **System Settings, Privacy and Security**, scroll down and click **Open Anyway**.
 
-**Or by hand:** download `DeskNotch-<version>-universal.dmg` from [**Releases**](https://github.com/thecharydev/deskNotch/releases) and drag DeskNotch to Applications. The build is not notarized (that needs a paid Apple account), so the first open is blocked. Open **System Settings, Privacy and Security**, scroll down and click **Open Anyway**. The Homebrew cask clears that block for you.
-
-Update with `brew upgrade --cask desknotch`, or download the new DMG. DeskNotch never installs updates by itself on macOS; Settings tells you when a newer version is out.
+Update by downloading the new DMG. CatNotch never installs updates by itself on macOS; Settings tells you when a newer version is out.
 
 **Permissions**, each asked only when its feature needs it:
 - **Location**: to show the Wi-Fi network name. Say no and you get a plain "Wi-Fi" moment.
 - **Screen Recording**: only when you turn on Glass. Say no and the style stays Default.
-- **Keychain**: only after you agree to AI usage, so DeskNotch can read the Claude Code sign in.
+- **Keychain**: only after you agree to AI usage, so CatNotch can read the Claude Code sign in.
 
 macOS ties these approvals to the app's signature, which changes with every build. After an update you may be asked again.
 
@@ -133,7 +131,11 @@ Everything stays on your PC. Media, microphone and camera state, Wi-Fi, Bluetoot
 
 ## Feedback
 
-Found a bug or have an idea? [Open an issue](https://github.com/thecharydev/deskNotch/issues) with what you did, what happened, and a screenshot if something looked off.
+Found a bug or have an idea? [Open an issue](https://github.com/thecharydev/catnotch/issues) with what you did, what happened, and a screenshot if something looked off.
+
+## Credits
+
+The notch themes (Mocha, Macchiato, Frappé) use the [Catppuccin](https://github.com/catppuccin/catppuccin) colour palette, and the cat companion is our own drawing of the Catppuccin mascot. Catppuccin is MIT licensed, Copyright (c) 2021 Catppuccin. CatNotch is an independent app and is not affiliated with or endorsed by Catppuccin.
 
 ---
 

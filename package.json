@@ -1,8 +1,8 @@
 {
   "private": true,
   "name": "desknotch",
-  "productName": "DeskNotch",
-  "description": "DeskNotch is an app for Windows that gives you a notch, just like the Apple devices",
+  "productName": "CatNotch",
+  "description": "CatNotch is an app for Windows that gives you a notch, just like the Apple devices",
   "version": "1.0.5",
   "author": "Devezio.tech",
   "copyright": "Copyright © 2026 Devezio.tech",
