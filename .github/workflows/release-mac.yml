@@ -23,7 +23,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build:helper
-      - run: npx nextron build --mac --universal
+      # electron-builder auto publishes on a tag and wants GH_TOKEN; the step below
+      # publishes with gh, so tell the build not to.
+      - run: npx nextron build --mac --universal --publish never
       # Tags are unprefixed (1.0.4). The release is published (not a draft) with
       # notes from the merged PRs; CatNotch.dmg is a stable name for the README's
       # releases/latest/download link.
