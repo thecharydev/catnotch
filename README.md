@@ -93,7 +93,8 @@ Requires Node.js 20+.
 ```bash
 npm install     # install dependencies
 npm run dev     # run in development, with hot reload
-npm run build   # build the Windows installer into dist/
+npm run build                        # build the Windows installer into dist/
+npm run build -- --mac --universal   # build the macOS app and dmg into dist/
 ```
 
 ### Releasing an update
@@ -112,7 +113,7 @@ Keep `appId` in `electron-builder.yml` unchanged, or an update installs as a sec
 
 ## Privacy
 
-Everything stays on your PC. Media, microphone and camera state, Wi-Fi, Bluetooth, screenshots and app usage are read from Windows locally and never leave it. AI usage is read with the logins Claude Code and Codex already keep on your machine, and those tokens are sent only to their own providers (Anthropic and OpenAI).
+Everything stays on your computer. Media, microphone and camera state, Wi-Fi, Bluetooth, screenshots and app usage are read from your system (Windows or macOS) locally and never leave it. AI usage is read with the logins Claude Code and Codex already keep on your machine, and those tokens are sent only to their own providers (Anthropic and OpenAI).
 
 ## Known limits (beta)
 
@@ -135,8 +136,10 @@ Found a bug or have an idea? [Open an issue](https://github.com/thecharydev/catn
 
 ## Credits
 
+CatNotch is built on [DeskNotch](https://github.com/yashsrivasta7a/deskNotch) by Yash Srivastava (yashsrivasta7a.in), and is developed further by Chary ([thecharydev](https://github.com/thecharydev)).
+
 The notch themes (Mocha, Macchiato, Frappé) use the [Catppuccin](https://github.com/catppuccin/catppuccin) colour palette, and the cat companion is our own drawing of the Catppuccin mascot. Catppuccin is MIT licensed, Copyright (c) 2021 Catppuccin. CatNotch is an independent app and is not affiliated with or endorsed by Catppuccin.
 
 ---
 
-Copyright © 2026 Devezio.tech · App ID `com.devezio.desknotch`
+Copyright © 2026 Yash Srivastava and Chary · App ID `com.devezio.desknotch`

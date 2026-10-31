@@ -1,6 +1,6 @@
 ﻿CatNotch - Terms of Use
 
-Copyright (c) 2026 yashsrivasta7a.in. Please read these terms before installing. By clicking "I Agree" you accept them. If you do not agree, click Cancel and CatNotch will not be installed.
+Copyright (c) 2026 Yash Srivastava and Chary. Please read these terms before installing. By clicking "I Agree" you accept them. If you do not agree, click Cancel and CatNotch will not be installed.
 
 1. What CatNotch does
 CatNotch shows a notch at the top of your screen with music controls, tasks, reminders, a focus timer, files, screen time and AI usage limits.
