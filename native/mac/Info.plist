@@ -9,9 +9,9 @@
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>
-  <key>NSLocationUsageDescription</key><string>DeskNotch shows the name of the Wi-Fi network you join.</string>
-  <key>NSLocationWhenInUseUsageDescription</key><string>DeskNotch shows the name of the Wi-Fi network you join.</string>
-  <key>NSCalendarsUsageDescription</key><string>DeskNotch reads your calendar to show your next events. It never changes it.</string>
-  <key>NSCalendarsFullAccessUsageDescription</key><string>DeskNotch reads your calendar to show your next events. It never changes it.</string>
+  <key>NSLocationUsageDescription</key><string>CatNotch shows the name of the Wi-Fi network you join.</string>
+  <key>NSLocationWhenInUseUsageDescription</key><string>CatNotch shows the name of the Wi-Fi network you join.</string>
+  <key>NSCalendarsUsageDescription</key><string>CatNotch reads your calendar to show your next events. It never changes it.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key><string>CatNotch reads your calendar to show your next events. It never changes it.</string>
 </dict>
 </plist>

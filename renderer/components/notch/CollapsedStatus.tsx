@@ -233,12 +233,12 @@ const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avat
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-      {/* On a cutout the companion waits in the left wing: DeskNotch is awake. */}
+      {/* On a cutout the companion waits in the left wing: CatNotch is awake. */}
       {cutout && avatar && !focusing && !isPlaying &&
         (avatar === 'photo' ? (
           photo && <img src={photo} alt="" className="h-[18px] w-[18px] shrink-0 rounded-full object-cover" />
         ) : (
-          <span className="grid shrink-0 place-items-center" aria-label="DeskNotch is active">
+          <span className="grid shrink-0 place-items-center" aria-label="CatNotch is active">
             {avatar === 'catppuccin' ? <CatppuccinCat size={20} coat={accent ?? '#cba6f7'} flavor={flavor} still /> : <BotAvatar type={avatar} size={20} theme="dark" />}
           </span>
         ))}

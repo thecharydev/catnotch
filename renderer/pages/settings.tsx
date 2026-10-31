@@ -22,7 +22,7 @@ export default function SettingsPage() {
   return (
     <>
       <Head>
-        <title>DeskNotch Settings</title>
+        <title>CatNotch Settings</title>
       </Head>
       {/* The window is transparent so macOS vibrancy and Windows mica show through. */}
       <style jsx global>{`

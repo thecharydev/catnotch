@@ -819,7 +819,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
         <Group>
           <Row
             title="Style"
-            detail={glassNote ? 'Glass needs Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
+            detail={glassNote ? 'Glass needs Screen Recording. Allow CatNotch in System Settings, then try again.' : undefined}
           >
             <Segmented
               id="style"

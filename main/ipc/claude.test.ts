@@ -312,7 +312,7 @@ describe('replies (AC-6, AC-7)', () => {
       const view = await waitPending()
       expect(view).toMatchObject({ kind: 'permission', tool: 'Bash', text: 'ls -la', project: 'proj' })
       expect(await ipc('claude:answer', view.id, choice)).toBe(true)
-      const decision = choice === 'allow' ? { behavior: 'allow' } : { behavior: 'deny', message: 'Denied from DeskNotch', interrupt: false }
+      const decision = choice === 'allow' ? { behavior: 'allow' } : { behavior: 'deny', message: 'Denied from CatNotch', interrupt: false }
       expect((await sent).json).toEqual({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } })
     }
   })

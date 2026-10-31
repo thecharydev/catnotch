@@ -16,6 +16,9 @@ import { startUpdater } from './updater'
 import { registerSettingsWindow } from './settingsWindow'
 import { checkAndApplyFullscreenState, isTucked, stopFullscreenWatch } from './fullscreen'
 
+// The app is now called CatNotch, but the data folder keeps its old name so nobody loses their tasks, settings or Claude hook token.
+app.setPath('userData', path.join(app.getPath('appData'), 'DeskNotch'))
+
 const isProd = process.env.NODE_ENV === 'production'
 
 const STRIP_HEIGHT = 500
@@ -34,7 +37,7 @@ const createNotchWindow = (bounds: Rect) => {
   const window = new BrowserWindow({
     ...bounds,
     // The fullscreen watcher (fullscreen.ts) knows its own window by this title.
-    title: 'DeskNotch',
+    title: 'CatNotch',
     transparent: true,
     hasShadow: false,
     frame: false,
@@ -44,7 +47,7 @@ const createNotchWindow = (bounds: Rect) => {
     skipTaskbar: true,
     // Windows: a tool window never lists on the taskbar or in Alt+Tab, even
     // after it takes focus (plain skipTaskbar can be lost then). macOS: a
-    // panel floats over other apps without activating DeskNotch.
+    // panel floats over other apps without activating CatNotch.
     type: process.platform === 'darwin' ? 'panel' : 'toolbar',
     alwaysOnTop: true,
     // macOS pushes a window down below the menu bar (and the cutout); this
@@ -52,6 +55,8 @@ const createNotchWindow = (bounds: Rect) => {
     enableLargerThanScreen: process.platform === 'darwin',
     webPreferences: {
       preload: path.join(import.meta.dirname, 'preload.js'),
+      // The notch is a panel that is never the active app: without this, timers and animation frames can be throttled as "background", and the first hovers open slowly.
+      backgroundThrottling: false,
     },
   })
 

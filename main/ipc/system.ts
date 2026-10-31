@@ -57,12 +57,12 @@ export function registerSystemIpc() {
     const denied = systemPreferences.getMediaAccessStatus('screen') === 'denied'
     const { response } = await dialog.showMessageBox({
       type: 'info',
-      title: 'DeskNotch',
+      title: 'CatNotch',
       message: 'Glass needs Screen Recording',
       detail:
         'Glass shows a live, blurred view of what is behind the notch, so macOS asks you to allow Screen Recording. ' +
-        'DeskNotch only looks at the strip behind the notch, and nothing leaves your Mac.' +
-        (denied ? '\n\nIt was turned off before: switch DeskNotch on in System Settings, Privacy and Security, Screen Recording.' : ''),
+        'CatNotch only looks at the strip behind the notch, and nothing leaves your Mac.' +
+        (denied ? '\n\nIt was turned off before: switch CatNotch on in System Settings, Privacy and Security, Screen Recording.' : ''),
       buttons: [denied ? 'Open System Settings' : 'Continue', 'Not now'],
       defaultId: 0,
       cancelId: 1,

@@ -478,7 +478,7 @@ export default function HomePage() {
   return (
     <React.Fragment>
       <Head>
-        <title>DeskNotch</title>
+        <title>CatNotch</title>
       </Head>
       <div className="w-full h-full flex justify-center items-start pointer-events-none">
         <div className="pointer-events-auto">

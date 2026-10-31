@@ -1,5 +1,5 @@
 appId: com.devezio.desknotch
-productName: DeskNotch
+productName: CatNotch
 copyright: Copyright © 2026 Devezio.tech
 directories:
   output: dist
@@ -14,8 +14,8 @@ files:
 # as a second app.
 publish:
   provider: github
-  owner: yashsrivasta7a
-  repo: deskNotch
+  owner: thecharydev
+  repo: catnotch
   # Your releases are tagged 0.2.0, not v0.2.0; keep new ones the same.
   vPrefixedTagName: false
 win:
@@ -38,7 +38,7 @@ appx:
   publisher: CN=F35F3C2B-A4E0-4061-BA7F-5EB9B3EE1446
   publisherDisplayName: Devezio
   applicationId: DeskNotch
-  displayName: DeskNotch
+  displayName: CatNotch
   backgroundColor: "#111113"
   languages:
     - en-US
@@ -74,7 +74,7 @@ mac:
     # macOS reads these from the app that is responsible for the helper (this
     # one), not from the helper's own plist; without them the Calendar and
     # Location prompts are refused without ever showing.
-    NSCalendarsUsageDescription: DeskNotch reads your calendar to show your next events. It never changes it.
-    NSCalendarsFullAccessUsageDescription: DeskNotch reads your calendar to show your next events. It never changes it.
-    NSLocationUsageDescription: DeskNotch shows the name of the Wi-Fi network you join.
-    NSLocationWhenInUseUsageDescription: DeskNotch shows the name of the Wi-Fi network you join.
+    NSCalendarsUsageDescription: CatNotch reads your calendar to show your next events. It never changes it.
+    NSCalendarsFullAccessUsageDescription: CatNotch reads your calendar to show your next events. It never changes it.
+    NSLocationUsageDescription: CatNotch shows the name of the Wi-Fi network you join.
+    NSLocationWhenInUseUsageDescription: CatNotch shows the name of the Wi-Fi network you join.

@@ -169,10 +169,10 @@ let asking: Promise<boolean> | null = null
 const askConsent = async () => {
   const { response } = await dialog.showMessageBox({
     type: 'question',
-    title: 'DeskNotch',
+    title: 'CatNotch',
     message: 'Show your Claude Code and Codex usage limits?',
     detail:
-      'To show your plan limits, DeskNotch reads the sign-in that Claude Code and Codex already keep on this PC, ' +
+      'To show your plan limits, CatNotch reads the sign-in that Claude Code and Codex already keep on this PC, ' +
       'and sends it only to Anthropic or OpenAI to fetch your usage. It is never stored elsewhere or sent anywhere else. ' +
       'Your use of those services stays under their own terms.\n\n' +
       'You can change this later by switching AI usage on or off in Settings.',

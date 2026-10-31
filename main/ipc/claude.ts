@@ -348,7 +348,7 @@ const answer = (id: unknown, choice: unknown) => {
   }
   if (view.kind === 'permission') {
     if (choice !== 'allow' && choice !== 'deny') return false
-    const decision = choice === 'allow' ? { behavior: 'allow' } : { behavior: 'deny', message: 'Denied from DeskNotch', interrupt: false }
+    const decision = choice === 'allow' ? { behavior: 'allow' } : { behavior: 'deny', message: 'Denied from CatNotch', interrupt: false }
     leave(id)
     reply(item.res, { hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } })
     return true
