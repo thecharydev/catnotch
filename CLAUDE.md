@@ -24,9 +24,9 @@ A notch style bar at the top of the screen (macOS and Windows) built with Electr
 - A prompt is skipped when a terminal is in front (Claude's own prompt is already visible). VS Code is never skipped.
 - `app/` and `dist/` are build output. Do not edit them.
 - Never touch the real `~/.claude` in tests. Point `CLAUDE_CONFIG_DIR` at a temp folder.
-- Git flow: there are two branches, `dev` and `main`. There is no `master`.
-  - Every commit and every push goes to `dev` first. Never commit or push straight to `main`.
-  - To ship, raise a pull request from `dev` into `main`. Write the PR description with the `/document pr` skill.
+- Git flow: there is one long lived branch, `main`. There is no `master` and no `dev`.
+  - Every change goes on a short branch off `main` (like `fix/something`). Never commit or push straight to `main`.
+  - To ship, raise a pull request from that branch into `main`, then delete the branch. Write the PR description with the `/document pr` skill.
   - Always confirm before each step: show the commit message and wait for a yes before `git commit`; wait for a yes before `git push`; wait for a yes before `gh pr create`. Approval for one step does not cover the next.
   - Do not run `git commit`, `git push` or `gh pr create` unless asked for that exact action (`.agents/rules/no_git_push.md`).
 
