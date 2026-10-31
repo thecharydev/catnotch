@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import Head from 'next/head'
 import { AnimatePresence, motion } from 'motion/react'
 import { CalendarDays, FolderOpen, LayoutGrid, ListTodo, Settings as Cog, Terminal } from 'lucide-react'
-import { NotchChassis, CHROME_X, CHROME_Y, PAD, WING } from '../components/notch/NotchChassis'
+import { NotchChassis, CHROME_Y, PAD, WING } from '../components/notch/NotchChassis'
 import { AmbientVideo } from '../components/notch/AmbientVideo'
 import { CollapsedStatus, LOW_LEVEL, type Moment } from '../components/notch/CollapsedStatus'
 import { ViewRail, RailButton, type ViewDefinition } from '../components/notch/ViewSwitcher'
-import { SettingsPanel, DEFAULT_SETTINGS, isMac, DOCK_SCALE, SETTINGS_PANE, type Settings } from '../components/widgets/SettingsPanel'
+import { applyNotchTheme } from '../lib/catppuccin'
+import { isMac, DOCK_SCALE } from '../components/widgets/SettingsPanel'
 import { DeskView, DESK_WIDTH, DESK_HEIGHT } from '../components/widgets/DeskView'
 import { AppsRow } from '../components/widgets/AppsRow'
 import { useFocusLog } from '../hooks/useFocusLog'
@@ -18,15 +19,15 @@ import { useReminders, type Reminder } from '../hooks/useReminders'
 import { ClaudeStrip, ClaudeSessions, ClaudeChat, claudeSessionsHeight, claudeStripHeight, CLAUDE_WIDTH, CLAUDE_CHAT_HEIGHT } from '../components/widgets/ClaudeView'
 import { useClaude } from '../hooks/useClaude'
 import type { FileItem } from '../hooks/useFiles'
-import { botAvatarPalette } from 'bot-avatars'
-import { CompanionTile, COMPANION_WIDTH, COMPANION_OPEN_WIDTH, COMPANION_REMINDER_WIDTH, COMPANION_TIME_WIDTH, type CompanionMode } from '../components/widgets/CompanionTile'
+import { avatarAccent, DEFAULT_FLAVOR } from '../lib/catppuccin'
+import { CompanionTile, COMPANION_WIDTH, COMPANION_OPEN_WIDTH, COMPANION_REMINDER_WIDTH, COMPANION_TIME_WIDTH } from '../components/widgets/CompanionTile'
 import { MediaTile, TimeTile, TaskTile, MEDIA_WIDTH, TIME_WIDTH, TASK_WIDTH } from '../components/widgets/GlanceTiles'
 import { FocusTile, FOCUS_WIDTH } from '../components/widgets/FocusTile'
 import { StatusTile, STATUS_WIDTH, statusShown, type StatusPage } from '../components/widgets/StatusTile'
 import { AiOrbs, providerWidth, visibleLimits } from '../components/widgets/AiOrbs'
 import { AloneContext, TILE, TILE_GAP } from '../components/ui/tile'
 import { MAX_CARDS } from '../lib/glance'
-import { onStoreChange } from '../lib/store'
+import { useSettingsStore } from '../hooks/useSettingsStore'
 import { usePhoto } from '../hooks/usePhoto'
 import { useNowPlaying } from '../hooks/useNowPlaying'
 import { useDominantColor } from '../hooks/useDominantColor'
@@ -42,7 +43,7 @@ import { useCalendar, upcoming, visible, nextToday, untilText } from '../hooks/u
 import { CalendarView, CALENDAR_WIDTH, calendarHeight } from '../components/widgets/CalendarView'
 
 /** The places to go, as circles on the dock. Settings is a control, not a
- *  place, so it sits after them with the lock. */
+ *  place: it sits after them and opens its own window. */
 const VIEWS: ViewDefinition[] = [
   { id: 'glance', label: 'Home', icon: <LayoutGrid size={12} strokeWidth={2.2} /> },
   { id: 'desk', label: 'Focus & tasks', icon: <ListTodo size={12} strokeWidth={2.2} /> },
@@ -55,7 +56,6 @@ const CALENDAR_VIEW: ViewDefinition = { id: 'calendar', label: 'Calendar', icon:
 /** Each view sets the shell it needs; the notch springs between them. */
 const SIZES: Record<string, { width: number; height: number }> = {
   desk: { width: DESK_WIDTH, height: DESK_HEIGHT },
-  settings: { width: CHROME_X + 620, height: CHROME_Y + SETTINGS_PANE },
 }
 
 /** The notch's side padding around the card row. */
@@ -155,6 +155,9 @@ export default function HomePage() {
   const [capture, setCapture] = useState<FileItem | null>(null)
   const [holdOpen, setHoldOpen] = useState(false)
   const [closeKey, setCloseKey] = useState(0)
+  // The settings window has focus: keep the notch open beside it to show changes.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  useEffect(() => window.bridge?.on<boolean>('settings-window:state', setSettingsOpen), [])
   const notchOpen = useRef(false)
   const catchScreenshots = useRef(true)
   /** The view to return to once a moment folds away; null when not peeking. */
@@ -270,68 +273,20 @@ export default function HomePage() {
     show({ kind: 'battery', name: 'Battery low', detail: `${Math.round(battery.level * 100)}%` })
   }, [battery.supported, battery.charging, battery.level])
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
-  const settingsLoaded = useRef(false)
+  const [settings, setSettings] = useSettingsStore()
   // With nothing chosen, the AI readings stand in rather than an empty notch —
   // so they are fetched then too. Otherwise nothing is asked of Anthropic or
   // OpenAI while the readings are switched off.
   // Settings also needs them, to count the cards a switch would add.
   const nothingChosen = !settings.showAvatar && !settings.showMusic && !settings.showTasks && !settings.showFocus
   const collapsedWantsAi = settings.collapsedRight === 'ai'
-  const aiLimits = useAiLimits(settings.showAiUsage || nothingChosen || view === 'settings' || collapsedWantsAi)
+  const aiLimits = useAiLimits(settings.showAiUsage || nothingChosen || collapsedWantsAi)
   // Switching AI usage back on after declining is what asks again (ipc/limits.ts).
   useEffect(() => {
     if (settings.showAiUsage || collapsedWantsAi) void refreshAiLimits()
   }, [settings.showAiUsage, collapsedWantsAi])
 
-  useEffect(() => {
-    window.bridge
-      ?.invoke<Partial<Settings>>('store:get', 'settings')
-      .then(async (stored) => {
-        const loadedSettings: Settings = {
-          ...DEFAULT_SETTINGS,
-          ...stored,
-          // Translucent became Glass, now a real blur; Mica is gone, so it is Default.
-          notchStyle:
-            (stored?.notchStyle as string) === 'translucent'
-              ? 'glass'
-              : (stored?.notchStyle as string) === 'mica'
-                ? 'black'
-                : (stored?.notchStyle ?? DEFAULT_SETTINGS.notchStyle),
-          // Focus lives in the companion now; the glance card is retired.
-          showFocus: false,
-          // Older settings kept a list of topics under another name; the first
-          // one becomes the mode.
-          // The AI mode became Screen time, and Tasks became Reminder.
-          companionMode:
-            ((stored?.companionMode as string) === 'ai'
-              ? 'screen'
-              : (stored?.companionMode as string) === 'tasks'
-                ? 'reminder'
-                : stored?.companionMode) ??
-            ((Array.isArray((stored as any)?.companionSays) && (stored as any)?.companionSays[0]) as CompanionMode | undefined) ??
-            DEFAULT_SETTINGS.companionMode,
-        }
-
-        try {
-          const actualStartOnBoot = await window.bridge?.invoke<boolean>(
-            'settings:start-on-boot',
-            stored?.startOnBoot ?? DEFAULT_SETTINGS.startOnBoot,
-          )
-          if (typeof actualStartOnBoot === 'boolean') {
-            loadedSettings.startOnBoot = actualStartOnBoot
-          }
-        } catch {}
-
-        setSettings(loadedSettings)
-      })
-      .catch(() => setSettings(DEFAULT_SETTINGS))
-      .finally(() => {
-        settingsLoaded.current = true
-      })
-  }, [])
-
-  useEffect(() => onStoreChange<Settings>('settings', setSettings), [])
+  useEffect(() => applyNotchTheme(settings), [settings])
 
   // Screen time comes from DeskTime; without it installed the option stays off.
   const screenTime = useScreenTime(settings.collapsedRight === 'screen' || (settings.showAvatar && settings.companionMode === 'screen'))
@@ -354,12 +309,6 @@ export default function HomePage() {
     void window.bridge?.invoke<boolean>('notch:tucked').then((t) => setTucked(Boolean(t)))
     return window.bridge?.on<boolean>('notch:tucked', setTucked)
   }, [])
-
-  useEffect(() => {
-    if (!settingsLoaded.current) return
-    void window.bridge?.invoke('store:set', 'settings', settings)
-    void window.bridge?.invoke('settings:start-on-boot', settings.startOnBoot)
-  }, [settings])
 
   catchScreenshots.current = settings.catchScreenshots ?? true
 
@@ -419,7 +368,9 @@ export default function HomePage() {
   // What the companion may speak about: the chosen windows, whether or not their cards are on.
   const companionLimits = visibleLimits(aiLimits, settings.hiddenLimits)
   /** The companion's colour, which the desk borrows so both views agree. */
-  const accent = settings.avatar === 'photo' ? '#ffffff' : botAvatarPalette[settings.avatar]
+  const accent = avatarAccent(settings)
+  const flavor = settings.notchFlavor ?? DEFAULT_FLAVOR
+  const motionOn = { look: settings.companionLook === true, canSleep: settings.companionSleepOn === true, react: settings.companionReact === true }
   const showCompanion = settings.showAvatar && (settings.avatar !== 'photo' || Boolean(photo))
 
   // A focus session just ended: the notch opens on the Done card alone for a
@@ -543,7 +494,8 @@ export default function HomePage() {
             expandedWidth={size.width}
             expandedHeight={size.height}
             dockSide={settings.dockSide ?? 'bottom'}
-            keepOpen={holdOpen}
+            keepOpen={holdOpen || settingsOpen}
+            lockShown={settingsOpen}
             belowSide={appsSide}
             below={
               (settings.deskApps ?? 'most') !== 'off' && (settings.appsOn ?? ['files']).includes(view) ? (
@@ -562,12 +514,7 @@ export default function HomePage() {
             rail={view === 'capture' || view === 'done' || view === 'reminder' || stripAlone ? undefined : 
               <>
                 <ViewRail views={shownViews} active={view} onChange={setView} />
-                <RailButton
-                  label="Settings"
-                  active={view === 'settings'}
-                  layoutId="rail-settings"
-                  onClick={() => setView((current) => (current === 'settings' ? 'glance' : 'settings'))}
-                >
+                <RailButton label="Settings" onClick={() => window.bridge?.send('settings-window:open')}>
                   <Cog size={12} strokeWidth={2.2} />
                 </RailButton>
               </>
@@ -615,6 +562,9 @@ export default function HomePage() {
                           playing={isPlayingAudio}
                           mode={companionMode}
                           sleeps={settings.companionSleeps ?? 'time'}
+                          accent={accent}
+                          flavor={flavor}
+                          {...motionOn}
                           minutes={settings.focusMinutes ?? 25}
                           onMinutes={(m) => setSettings((s) => ({ ...s, focusMinutes: m }))}
                           open={hubOpen}
@@ -640,6 +590,7 @@ export default function HomePage() {
                     <ReminderView
                       reminder={ringing}
                       avatar={settings.avatar}
+                      flavor={flavor}
                       photo={photo}
                       accent={accent}
                       onSnooze={() => {
@@ -655,13 +606,14 @@ export default function HomePage() {
                     chatId ? (
                       <ClaudeChat session={claude.sessions.find((s) => s.id === chatId)} accent={accent} onBack={() => setChatId(null)} />
                     ) : (
-                      <ClaudeSessions sessions={claude.sessions} enabled={claude.enabled} accent={accent} onSettings={() => setView('settings')} onOpen={setChatId} />
+                      <ClaudeSessions sessions={claude.sessions} enabled={claude.enabled} accent={accent} onSettings={() => window.bridge?.send('settings-window:open')} onOpen={setChatId} />
                     )
                   ) : view === 'done' ? (
                     <DoneView
                       timer={timer}
                       minutes={settings.focusMinutes ?? 25}
                       avatar={settings.avatar}
+                      flavor={flavor}
                       photo={photo}
                       accent={accent}
                       onDone={() => {
@@ -696,8 +648,6 @@ export default function HomePage() {
                         void calendar.allow()
                       }}
                     />
-                  ) : view === 'settings' ? (
-                    <SettingsPanel settings={settings} onChange={setSettings} aiLimits={aiLimits} desktimeInstalled={screenTime.installed} />
                   ) : (
                     <DeskView
                       avatar={settings.avatar}
@@ -711,6 +661,8 @@ export default function HomePage() {
                       track={nowPlaying?.title ?? null}
                       playing={isPlayingAudio}
                       sleeps={settings.companionSleeps ?? 'time'}
+                      flavor={flavor}
+                      {...motionOn}
                     />
                   )}
                 </motion.div>
@@ -727,6 +679,8 @@ export default function HomePage() {
                   tasks={tasks}
                   timer={timer}
                   avatar={showCompanion ? settings.avatar : null}
+                  accent={accent}
+                  flavor={flavor}
                   photo={photo}
                   right={collapsedRight}
                   screenMs={screenTime.ms}

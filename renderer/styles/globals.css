@@ -192,3 +192,17 @@ nextjs-portal,
   position: relative;
   z-index: 1;
 }
+
+/* Tailwind v4 preflight leaves buttons on the default arrow. */
+button:not(:disabled),
+[role='button']:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Baseline hover for every button; per-button hover classes still stack on top. */
+button:not(:disabled) {
+  transition: filter 120ms;
+}
+button:not(:disabled):hover {
+  filter: brightness(1.15);
+}

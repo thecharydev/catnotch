@@ -101,7 +101,7 @@ export const ClaudeStrip: React.FC<{
               <Terminal size={12} strokeWidth={2.4} />
             </button>
             <button type="button" className={quietPill} onClick={() => onAnswer('deny')}>Deny</button>
-            <motion.button whileTap={{ scale: 0.94 }} type="button" className={`${pill} text-black`} style={{ background: accent }} onClick={() => onAnswer('allow')}>
+            <motion.button whileTap={{ scale: 0.94 }} type="button" className={`${pill} text-black transition-[filter] hover:brightness-110`} style={{ background: accent }} onClick={() => onAnswer('allow')}>
               Allow
             </motion.button>
           </div>

@@ -58,9 +58,9 @@ export function registerSystemIpc() {
     const { response } = await dialog.showMessageBox({
       type: 'info',
       title: 'DeskNotch',
-      message: 'Transparent and Glass need Screen Recording',
+      message: 'Glass needs Screen Recording',
       detail:
-        'Transparent and Glass show a live view of what is behind the notch, so macOS asks you to allow Screen Recording. ' +
+        'Glass shows a live, blurred view of what is behind the notch, so macOS asks you to allow Screen Recording. ' +
         'DeskNotch only looks at the strip behind the notch, and nothing leaves your Mac.' +
         (denied ? '\n\nIt was turned off before: switch DeskNotch on in System Settings, Privacy and Security, Screen Recording.' : ''),
       buttons: [denied ? 'Open System Settings' : 'Continue', 'Not now'],

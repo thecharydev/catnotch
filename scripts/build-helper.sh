@@ -21,3 +21,15 @@ mkdir -p native/mac/build/mediaremote
 cp "$MR/bin/mediaremote-adapter.pl" native/mac/build/mediaremote/
 cp -R "$MR/build/MediaRemoteAdapter.framework" native/mac/build/mediaremote/
 rm -rf "$MR/build"
+
+# Glass: the native blur view (spec 0013), a universal N-API addon.
+VB=native/mac/build/vibrancy
+mkdir -p "$VB"
+for arch in arm64 x86_64; do
+  clang++ -std=c++17 -O2 -fobjc-arc -shared -undefined dynamic_lookup -arch "$arch" -mmacosx-version-min=13.0 \
+    -DNODE_GYP_MODULE_NAME=vibrancy -DNAPI_VERSION=8 -Inode_modules/node-api-headers/include \
+    native/mac/vibrancy/vibrancy.mm -framework Cocoa -framework QuartzCore -o "$VB/vibrancy-$arch.node"
+done
+lipo -create "$VB/vibrancy-arm64.node" "$VB/vibrancy-x86_64.node" -output native/mac/build/vibrancy.node
+rm -rf "$VB"
+codesign --force --sign - native/mac/build/vibrancy.node

@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import serve from 'electron-serve'
 import { startSmtc, stopSmtc } from './smtc'
 import { startHelper, stopHelper } from './mac/helper'
+import { attachGlass, applyGlass, cleanShapes, glassAvailable } from './mac/vibrancy'
 import { startMacNowPlaying, stopMacNowPlaying } from './mac/nowplaying'
 import { registerIpc } from './ipc'
 import { stopMediaIpc } from './ipc/media'
@@ -12,6 +13,7 @@ import { startScreenshotWatch, stopScreenshotWatch } from './ipc/screenshots'
 import { setupNotchWindows } from './display'
 import { applyContentProtection } from './ipc/system'
 import { startUpdater } from './updater'
+import { registerSettingsWindow } from './settingsWindow'
 import { checkAndApplyFullscreenState, isTucked, stopFullscreenWatch } from './fullscreen'
 
 const isProd = process.env.NODE_ENV === 'production'
@@ -74,6 +76,8 @@ const createNotchWindow = (bounds: Rect) => {
   }
   window.on('move', pin)
   window.on('resize', pin)
+
+  attachGlass(window)
 
   window.setIgnoreMouseEvents(true, { forward: true })
   // A notch made later (a display plugged in) honours Hide in screenshots too.
@@ -145,6 +149,14 @@ app.whenReady().then(() => {
     notchBounds.set(event.sender.id, Array.isArray(bounds) ? bounds : [bounds])
   })
 
+  // Glass on macOS: the renderer sends the shapes of its glass surfaces and the
+  // native blur view is cut to them (spec 0013).
+  ipcMain.handle('glass:native', () => glassAvailable)
+  ipcMain.on('notch:glass', (event, shapes: unknown) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) applyGlass(window, cleanShapes(shapes))
+  })
+
   // Only take keyboard focus when the notch is pinned open, so merely hovering
   // it does not steal focus from whatever the user was typing in.
   ipcMain.on('notch:pinned', (event, isPinned: boolean) => {
@@ -166,6 +178,7 @@ app.whenReady().then(() => {
   // Handlers first, so a window created later (another display, or 'All')
   // finds them ready.
   registerIpc()
+  registerSettingsWindow()
   startUpdater()
   startSmtc()
   if (process.platform === 'darwin') {

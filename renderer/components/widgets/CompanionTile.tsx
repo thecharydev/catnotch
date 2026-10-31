@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useMotionValue, useSpring } from 'motion/react'
-import { BotAvatar, botAvatarPalette } from 'bot-avatars'
+import { BotAvatar } from 'bot-avatars'
+import { CatppuccinCat } from './CatppuccinCat'
+import type { Flavor } from '../../lib/catppuccin'
 import { BellRing, ChevronRight, Moon, RotateCcw, Sun, X } from 'lucide-react'
 import { Tile, TileLabel } from '../ui/tile'
 import { ThinkingOrb } from 'thinking-orbs'
@@ -534,10 +536,12 @@ const useGaze = (
   onLook: (dx: number, dy: number) => void,
   /** The pointer is on the card, so the companion attends to its mode. */
   engaged: boolean,
+  /** Look around is on; off, no timer, listener or synthetic pointer exists. */
+  look: boolean,
 ) => {
   const paused = !timer.isRunning && timer.remainingMs > 0 && !timer.finished
   // Off the card the companion just sits; on it, it looks at its mode's target.
-  const watching = engaged && (mode === 'focus' ? timer.isRunning || paused : true)
+  const watching = look && engaged && (mode === 'focus' ? timer.isRunning || paused : true)
   const remaining = useRef(timer.remainingMs)
   remaining.current = timer.remainingMs
 
@@ -595,6 +599,13 @@ interface CompanionTileProps {
   playing: boolean
   mode: CompanionMode
   sleeps: CompanionSleeps
+  /** The companion's colour, and the notch flavour the cat draws from. */
+  accent: string
+  flavor: Flavor
+  /** The three motion switches. */
+  look: boolean
+  canSleep: boolean
+  react: boolean
   minutes: number
   onMinutes: (m: number) => void
   /** Focus: the lengths panel is open. Reminder: the list and form are showing. */
@@ -619,6 +630,11 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
   playing,
   mode,
   sleeps,
+  accent,
+  flavor,
+  look,
+  canSleep,
+  react,
   minutes,
   onMinutes,
   open,
@@ -653,7 +669,7 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
     leanX.set(clamp(dx * 0.06, 7))
     leanY.set(clamp(dy * 0.05, 4))
     tilt.set(clamp(dx * 0.08, 9))
-  }, engaged)
+  }, engaged, look)
 
   const done = tasks.tasks.filter((task) => task.done).length
   const hour = now.getHours()
@@ -661,18 +677,17 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
   // In time mode the companion keeps the clock's hours: asleep through the
   // night, awake with the morning. Elsewhere the setting decides.
   const night = hour >= 22 || hour < 6
-  const asleep = mode === 'time' ? night : sleeps === 'time' ? hour >= 23 || hour < 6 : sleeps === 'idle' ? idle : false
+  const asleep = canSleep && (mode === 'time' ? night : sleeps === 'time' ? hour >= 23 || hour < 6 : sleeps === 'idle' ? idle : false)
   // Waking is a moment: it stretches into life when the morning comes.
-  const bursting = useBurst([track, done, timer.isRunning, timer.finished, mode === 'time' && !night])
+  const burst = useBurst([track, done, timer.isRunning, timer.finished, mode === 'time' && !night])
+  const bursting = react && burst
   const state = bursting ? 'working' : asleep ? 'sleeping' : 'default'
-  /** The companion's own colour: every mode wears it. */
-  const accent = avatar === 'photo' ? '#ffffff' : botAvatarPalette[avatar]
   /** Each mode's own body language, on top of the lean, while hovered. Sleep
    *  breathing stays regardless. A task done gets a hop. */
   const idleMove =
     mode === 'time' && asleep
       ? { animate: { y: [3, 5, 3], scaleY: [0.97, 1.01, 0.97], scaleX: [1.02, 0.99, 1.02], rotate: -4 }, transition: { duration: 3.6, repeat: Infinity, ease: 'easeInOut' as const } }
-      : !engaged
+      : !engaged || !react
         ? { animate: { rotate: 0, x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1 }, transition: { duration: 0.4 } }
         : mode === 'focus' && timer.isRunning
           ? { animate: { rotate: [-2.5, 2.5, -2.5] }, transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' as const } }
@@ -691,7 +706,7 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
       glow={
         avatar === 'photo'
           ? undefined
-          : `radial-gradient(70% 120% at 18% 50%, color-mix(in srgb, ${botAvatarPalette[avatar]} 26%, transparent), transparent 70%)`
+          : `radial-gradient(70% 120% at 18% 50%, color-mix(in srgb, ${accent} 26%, transparent), transparent 70%)`
       }
     >
       <div className="flex h-full items-center gap-3" onMouseEnter={() => setEngaged(true)} onMouseLeave={() => setEngaged(false)}>
@@ -704,7 +719,11 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
             ) : (
               <motion.div style={{ x, y, rotate }}>
                 <motion.div {...idleMove}>
-                  <BotAvatar type={avatar} size={84} theme="dark" state={state} {...CALM} />
+                  {avatar === 'catppuccin' ? (
+                    <CatppuccinCat size={84} coat={accent} flavor={flavor} state={state} {...CALM} />
+                  ) : (
+                    <BotAvatar type={avatar} size={84} theme="dark" state={state} {...CALM} />
+                  )}
                 </motion.div>
               </motion.div>
             )}

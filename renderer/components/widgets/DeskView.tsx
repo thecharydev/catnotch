@@ -7,6 +7,7 @@ import { CHROME_X, CHROME_Y } from '../notch/NotchChassis'
 import type { TaskStore } from '../../hooks/useTasks'
 import type { Timer } from '../../hooks/useTimer'
 import type { useFocusLog } from '../../hooks/useFocusLog'
+import type { Flavor } from '../../lib/catppuccin'
 import type { Avatar } from './SettingsPanel'
 
 /** How the desk arrives: each piece rises in a beat after the last. */
@@ -142,6 +143,10 @@ interface DeskViewProps {
   track: string | null
   playing: boolean
   sleeps: CompanionSleeps
+  flavor: Flavor
+  look: boolean
+  canSleep: boolean
+  react: boolean
 }
 
 /**
@@ -153,7 +158,7 @@ interface DeskViewProps {
  * desk is where the work happens (the glance's companion can be on anything
  * else), beside the whole task list.
  */
-export const DeskView: React.FC<DeskViewProps> = ({ avatar, photo, tasks, timer, minutes, onMinutes, accent, track, playing, sleeps }) => {
+export const DeskView: React.FC<DeskViewProps> = ({ avatar, photo, tasks, timer, minutes, onMinutes, accent, track, playing, sleeps, flavor, look, canSleep, react }) => {
   const [lengths, setLengths] = useState(false)
   return (
   <motion.div variants={staggered} initial="hidden" animate="shown" className="flex h-full flex-col">
@@ -169,6 +174,11 @@ export const DeskView: React.FC<DeskViewProps> = ({ avatar, photo, tasks, timer,
           playing={playing}
           mode="focus"
           sleeps={sleeps}
+          accent={accent}
+          flavor={flavor}
+          look={look}
+          canSleep={canSleep}
+          react={react}
           minutes={minutes}
           onMinutes={onMinutes}
           open={lengths}

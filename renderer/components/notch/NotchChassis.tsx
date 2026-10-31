@@ -77,6 +77,8 @@ interface NotchChassisProps {
   belowSide?: 'left' | 'right' | 'bottom'
   /** Holds the notch open regardless of hover — for a running timer, say. */
   keepOpen?: boolean
+  /** Show the lock as locked without pinning (pinning would take focus). */
+  lockShown?: boolean
   /** Told whenever the notch opens or closes. */
   onOpenChange?: (open: boolean) => void
   /** Bumped to fold the notch away now, even under the pointer. */
@@ -94,8 +96,8 @@ interface NotchChassisProps {
  *  the dock and apps tray: the surface's own colour, solid. */
 const CORNER_FILLS: Record<NotchStyle, string> = {
   black: '#000000',
-  transparent: 'rgb(20, 20, 24)',
-  glass: 'rgb(20, 20, 24)',
+  transparent: 'transparent',
+  glass: 'transparent',
 }
 
 /** How far the curves at the notch's top corners reach out along the screen's edge. */
@@ -124,7 +126,7 @@ const Ear: React.FC<{ side: 'left' | 'right'; notchStyle: NotchStyle }> = ({ sid
         maskImage: `radial-gradient(circle at ${side === 'left' ? '0' : '100%'} 100%, transparent ${EAR}px, black ${EAR + 0.5}px)`,
       }}
     >
-      {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={ref} />}
+      {notchStyle !== 'black' && <Backdrop kind={notchStyle} host={ref} ear={side} />}
     </div>
   )
 }
@@ -155,6 +157,7 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   below,
   belowSide = 'bottom',
   keepOpen = false,
+  lockShown = false,
   onOpenChange,
   closeKey = 0,
   tucked = false,
@@ -169,6 +172,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
   const [isPinned, setIsPinned] = useState(false)
 
   const isOpen = isHovered || isPinned || keepOpen
+  // The lock reads as locked while Settings holds the notch open too.
+  const locked = isPinned || lockShown
   // The cutout is black, so closed on one with nothing beside it the notch is
   // too, whatever is chosen. With wings, the wings show the style and a black
   // block covers the cutout itself.
@@ -483,8 +488,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                   {/* The lock: pinning is something you can see and do. */}
                   <motion.button
                     type="button"
-                    aria-label={isPinned ? 'Unpin' : 'Pin open'}
-                    aria-pressed={isPinned}
+                    aria-label={locked ? 'Unpin' : 'Pin open'}
+                    aria-pressed={locked}
                     whileTap={{ scale: 0.88 }}
                     transition={spring}
                     onClick={(event) => {
@@ -492,11 +497,11 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                       setIsPinned((pinned) => !pinned)
                     }}
                     className={`group/rail relative grid h-[var(--dock-btn,24px)] w-[var(--dock-btn,24px)] shrink-0 place-items-center rounded-full outline-none transition-colors duration-200 ${
-                      isPinned ? 'bg-white text-black' : 'text-white/45 hover:bg-white/[0.1] hover:text-white'
+                      locked ? 'bg-white text-black' : 'text-white/45 hover:bg-white/[0.1] hover:text-white'
                     }`}
                   >
-                    <span className="[transform:scale(var(--dock-icon,1))]">{isPinned ? <Lock size={11} strokeWidth={2.2} /> : <LockOpen size={11} strokeWidth={2} />}</span>
-                    <span className={railLabel('bottom')}>{isPinned ? 'Unlock' : 'Keep open'}</span>
+                    <span className="[transform:scale(var(--dock-icon,1))]">{locked ? <Lock size={11} strokeWidth={2.2} /> : <LockOpen size={11} strokeWidth={2} />}</span>
+                    <span className={railLabel('bottom')}>{locked ? 'Unlock' : 'Keep open'}</span>
                   </motion.button>
                   <QuitButton />
                 </motion.div>
@@ -533,8 +538,8 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                 {/* The lock: pinning is something you can see and do. */}
                 <motion.button
                   type="button"
-                  aria-label={isPinned ? 'Unpin' : 'Pin open'}
-                  aria-pressed={isPinned}
+                  aria-label={locked ? 'Unpin' : 'Pin open'}
+                  aria-pressed={locked}
                   whileTap={{ scale: 0.88 }}
                   transition={spring}
                   onClick={(event) => {
@@ -542,11 +547,11 @@ export const NotchChassis: React.FC<NotchChassisProps> = ({
                     setIsPinned((pinned) => !pinned)
                   }}
                   className={`group/rail relative grid h-[var(--dock-btn,24px)] w-[var(--dock-btn,24px)] shrink-0 place-items-center rounded-full outline-none transition-colors duration-200 ${
-                    isPinned ? 'bg-white text-black' : 'text-white/45 hover:bg-white/[0.1] hover:text-white'
+                    locked ? 'bg-white text-black' : 'text-white/45 hover:bg-white/[0.1] hover:text-white'
                   }`}
                 >
-                  <span className="[transform:scale(var(--dock-icon,1))]">{isPinned ? <Lock size={11} strokeWidth={2.2} /> : <LockOpen size={11} strokeWidth={2} />}</span>
-                  <span className={railLabel(side)}>{isPinned ? 'Unlock' : 'Keep open'}</span>
+                  <span className="[transform:scale(var(--dock-icon,1))]">{locked ? <Lock size={11} strokeWidth={2.2} /> : <LockOpen size={11} strokeWidth={2} />}</span>
+                  <span className={railLabel(side)}>{locked ? 'Unlock' : 'Keep open'}</span>
                 </motion.button>
                 <QuitButton />
               </motion.div>

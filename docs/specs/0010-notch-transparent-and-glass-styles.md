@@ -3,6 +3,8 @@
 **Date**: 2026-10-31
 **Status**: Accepted
 
+> On macOS, Glass is now drawn with a native blur and needs no Screen Recording when it loads; see spec 0013. This spec still describes the fallback.
+
 ## Summary
 
 DeskNotch gets two new looks beside Default (black): Transparent, a clear pane you can see the desktop through, and Glass, a frosted pane like macOS Liquid Glass. Both are drawn from the live screen picture the notch already uses, with different blur and tint settings. The open panel, the status wings, the cards inside the panel and the companion tile all change to match. The part over the physical cutout stays black so the notch still merges with the hardware.

@@ -62,6 +62,8 @@ mac:
       to: DeskNotchHelper.app
     - from: native/mac/build/mediaremote
       to: mediaremote
+    - from: native/mac/build/vibrancy.node
+      to: vibrancy.node
   identity: "-"
   # The hardened runtime makes macOS refuse the Calendar and Location prompts
   # unless the app carries their entitlements. An ad hoc build is never

@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion } from 'motion/react'
 import { BotAvatar } from 'bot-avatars'
+import { CatppuccinCat } from './CatppuccinCat'
+import type { Flavor } from '../../lib/catppuccin'
 import { BellRing } from 'lucide-react'
 import { CALM } from './CompanionTile'
 import { whenLabel, type Reminder } from '../../hooks/useReminders'
@@ -20,11 +22,12 @@ const spring = { type: 'spring' as const, stiffness: 420, damping: 22 }
 export const ReminderView: React.FC<{
   reminder: Reminder
   avatar: Avatar
+  flavor: Flavor
   photo: string | null
   accent: string
   onSnooze: () => void
   onDismiss: () => void
-}> = ({ reminder, avatar, photo, accent, onSnooze, onDismiss }) => (
+}> = ({ reminder, avatar, flavor, photo, accent, onSnooze, onDismiss }) => (
   <div className="flex h-full items-center justify-center gap-4" onClick={(event) => event.stopPropagation()}>
     {/* The companion, ringing. */}
     <div className="relative grid h-[84px] w-[84px] shrink-0 place-items-center">
@@ -48,7 +51,7 @@ export const ReminderView: React.FC<{
         {avatar === 'photo' ? (
           photo && <img src={photo} alt="" className="h-[52px] w-[52px] rounded-full object-cover" />
         ) : (
-          <BotAvatar type={avatar} size={56} theme="dark" state="working" {...CALM} />
+          avatar === 'catppuccin' ? <CatppuccinCat size={56} coat={accent} flavor={flavor} state="working" {...CALM} /> : <BotAvatar type={avatar} size={56} theme="dark" state="working" {...CALM} />
         )}
       </motion.div>
       {/* The bell, swinging from its top like a real one. */}

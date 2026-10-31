@@ -1,7 +1,9 @@
+import { CatppuccinCat } from './CatppuccinCat'
+import { FLAVORS, DEFAULT_FLAVOR, catCoat, DEFAULT_OPACITY, DEFAULT_BLUR, type NotchTheme } from '../../lib/catppuccin'
 import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { BotAvatar, type BotAvatarType } from 'bot-avatars'
-import { Bot, ImagePlus, LayoutGrid, PanelsTopLeft, Settings as Cog } from 'lucide-react'
+import { Bot, ImagePlus, Palette, LayoutGrid, PanelsTopLeft, Settings as Cog } from 'lucide-react'
 import { usePhoto } from '../../hooks/usePhoto'
 import type { ProviderLimits } from '../../hooks/useAiLimits'
 import { limitChoices, visibleLimits } from './AiOrbs'
@@ -9,19 +11,17 @@ import { cardCount, MAX_CARDS } from '../../lib/glance'
 import type { DockSide } from '../notch/ViewSwitcher'
 import type { AppsSide, DeskApps } from './AppsRow'
 import { COMPANION_MODES, COMPANION_SLEEPS, type CompanionMode, type CompanionSleeps } from './CompanionTile'
+import { glassNative } from '../../lib/glassShapes'
 
 const spring = { type: 'spring' as const, stiffness: 420, damping: 34 }
-
-/** The page's content height; the notch's Settings size follows it. */
-export const SETTINGS_PANE = 312
 
 /** Default, a soft charcoal notch; Glass, a live blur of what is behind. */
 export type NotchStyle = 'black' | 'transparent' | 'glass'
 
-/** A bot, or the user's own photo. */
-export type Avatar = BotAvatarType | 'photo'
+/** A bot, the Catppuccin cat, or the user's own photo. */
+export type Avatar = BotAvatarType | 'photo' | 'catppuccin'
 
-export interface Settings {
+export interface Settings extends NotchTheme {
   /** What the glance shows. */
   showMusic: boolean
   showTasks: boolean
@@ -61,6 +61,12 @@ export interface Settings {
   companionMode: CompanionMode
   /** When the companion sleeps. */
   companionSleeps: CompanionSleeps
+  /** The cat's coat, as a flavour accent name (Mauve when unset). */
+  catAccent?: string
+  /** Companion motion, all off unless switched on. */
+  companionLook?: boolean
+  companionSleepOn?: boolean
+  companionReact?: boolean
   /** How long a focus session runs, in minutes (fractions for seconds). */
   focusMinutes: number
   /** AI limits switched off, by key ("Claude-SESSION"). Hidden rather than
@@ -252,12 +258,13 @@ const Group: React.FC<{ children: React.ReactNode; note?: string }> = ({ childre
 // ── Sections ────────────────────────────────────────────────────────────────
 
 /** The blocks of settings; a sidebar section shows one or more of them. */
-type PartId = 'glance' | 'companion' | 'closed' | 'apps' | 'tabs' | 'look' | 'general'
-type SectionId = 'notch' | 'companion' | 'layout' | 'general'
+type PartId = 'colours' | 'glance' | 'companion' | 'closed' | 'apps' | 'tabs' | 'look' | 'general'
+type SectionId = 'notch' | 'colours' | 'companion' | 'layout' | 'general'
 
 /** Four sections, few enough to take in at once; each names its blocks when it has several. */
 const SECTIONS: { id: SectionId; label: string; icon: React.ReactNode; parts: { id: PartId; title: string }[] }[] = [
   { id: 'notch', label: 'Notch', icon: <LayoutGrid size={13} strokeWidth={2} />, parts: [{ id: 'glance', title: 'Home cards' }, { id: 'closed', title: 'Closed notch' }] },
+  { id: 'colours', label: 'Colours', icon: <Palette size={13} strokeWidth={2} />, parts: [{ id: 'colours', title: '' }] },
   { id: 'companion', label: 'Companion', icon: <Bot size={13} strokeWidth={2} />, parts: [{ id: 'companion', title: '' }] },
   { id: 'layout', label: 'Layout', icon: <PanelsTopLeft size={13} strokeWidth={2} />, parts: [{ id: 'tabs', title: 'Tabs' }, { id: 'apps', title: 'Apps bar' }] },
   { id: 'general', label: 'General', icon: <Cog size={13} strokeWidth={2} />, parts: [{ id: 'look', title: 'Appearance' }, { id: 'general', title: 'System' }] },
@@ -442,7 +449,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
   const [store, setStore] = useState(false)
   /** Set when Glass was refused (macOS Screen Recording): the style stays Default. */
   const [glassNote, setGlassNote] = useState(false)
+  const [nativeGlass, setNativeGlass] = useState(false)
   React.useEffect(() => {
+    void glassNative().then(setNativeGlass)
     void window.bridge?.invoke<boolean>('app:is-store').then((s) => setStore(Boolean(s)))
   }, [])
 
@@ -563,6 +572,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
                 ))}
                 <button
                   type="button"
+                  aria-label="Catppuccin cat"
+                  title="Catppuccin cat"
+                  aria-pressed={settings.avatar === 'catppuccin'}
+                  onClick={(event) => {
+                    halt(event)
+                    set('avatar', 'catppuccin')
+                  }}
+                  className="relative grid h-[32px] w-[32px] place-items-center rounded-full"
+                >
+                  {settings.avatar === 'catppuccin' && <motion.span layoutId="avatar-choice" transition={spring} className="absolute inset-0 rounded-full bg-white/[0.14]" />}
+                  <span className={`relative transition-opacity ${settings.avatar === 'catppuccin' ? '' : 'opacity-55 hover:opacity-100'}`}>
+                    <CatppuccinCat size={22} coat={catCoat(settings.notchFlavor, settings.catAccent)} flavor={settings.notchFlavor} still />
+                  </span>
+                </button>
+                <button
+                  type="button"
                   aria-label={photo ? 'Your photo. Click again to change it' : 'Use your own photo'}
                   title={photo ? 'Your photo. Click again to change it' : 'Use your own photo'}
                   onClick={async (event) => {
@@ -584,6 +609,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               </div>
             }
           />
+          {settings.avatar === 'catppuccin' && (
+            <Row
+              title="Coat"
+              below={
+                <div className="flex items-center gap-1.5">
+                  {Object.entries(FLAVORS[settings.notchFlavor ?? DEFAULT_FLAVOR].accents).map(([name, hex]) => (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-label={name}
+                      title={name}
+                      aria-pressed={(settings.catAccent ?? 'Mauve') === name}
+                      onClick={(event) => {
+                        halt(event)
+                        set('catAccent', name)
+                      }}
+                      className="h-[18px] w-[18px] rounded-full transition-shadow"
+                      style={{ background: hex, boxShadow: (settings.catAccent ?? 'Mauve') === name ? '0 0 0 2px rgba(255,255,255,0.9)' : 'none' }}
+                    />
+                  ))}
+                </div>
+              }
+            />
+          )}
           <Row title="Mode">
             <Segmented
               id="mode"
@@ -594,8 +643,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               disabledTitle="Needs ScreenWise installed"
             />
           </Row>
-          <Row title="Sleep">
-            <Segmented id="sleeps" options={COMPANION_SLEEPS} value={settings.companionSleeps ?? 'time'} onChange={(v) => set('companionSleeps', v)} />
+          <Row title="Look around" detail="Follows what it is for with its eyes and leans">
+            <Switch label="Look around" on={settings.companionLook === true} onChange={(v) => set('companionLook', v)} />
+          </Row>
+          <Row title="Sleep at night">
+            <Switch label="Sleep at night" on={settings.companionSleepOn === true} onChange={(v) => set('companionSleepOn', v)} />
+          </Row>
+          {settings.companionSleepOn === true && (
+            <Row title="Sleep">
+              <Segmented id="sleeps" options={COMPANION_SLEEPS} value={settings.companionSleeps ?? 'time'} onChange={(v) => set('companionSleeps', v)} />
+            </Row>
+          )}
+          <Row title="React to events" detail="Perks up on a new track, a finished task or a timer">
+            <Switch label="React to events" on={settings.companionReact === true} onChange={(v) => set('companionReact', v)} />
           </Row>
         </Group>
       </>
@@ -754,12 +814,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
         </Group>
       </>
     ),
-    look: (
+    colours: (
       <>
         <Group>
           <Row
             title="Style"
-            detail={glassNote ? 'Transparent and Glass need Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
+            detail={glassNote ? 'Glass needs Screen Recording. Allow DeskNotch in System Settings, then try again.' : undefined}
           >
             <Segmented
               id="style"
@@ -772,11 +832,90 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               onChange={async (v) => {
                 setGlassNote(false)
                 // Glass can need a permission first; without it, the style stays Default.
-                if (v !== 'black' && (await window.bridge?.invoke<boolean>('glass:permission')) === false) return setGlassNote(true)
+                if (v === 'glass' && !(await glassNative()) && (await window.bridge?.invoke<boolean>('glass:permission')) === false) return setGlassNote(true)
                 set('notchStyle', v)
               }}
             />
           </Row>
+        </Group>
+        <Group>
+          <Row title="Flavour">
+            <Segmented
+              id="flavor"
+              options={(Object.keys(FLAVORS) as (keyof typeof FLAVORS)[]).map((id) => ({ id, label: FLAVORS[id].label }))}
+              value={settings.notchFlavor ?? DEFAULT_FLAVOR}
+              onChange={(v) => onChange({ ...settings, notchFlavor: v, notchColor: undefined, notchAccent: undefined })}
+            />
+          </Row>
+          <Row title="Background" detail="Custom colour, or the flavour's own">
+            <input
+              type="color"
+              aria-label="Notch background"
+              value={settings.notchColor ?? FLAVORS[settings.notchFlavor ?? DEFAULT_FLAVOR].base}
+              onChange={(e) => set('notchColor', e.target.value)}
+              className="h-[24px] w-[40px] cursor-pointer rounded-[7px] border border-white/10 bg-transparent"
+            />
+          </Row>
+          <Row
+            title="Accent"
+            below={
+              <div className="flex flex-wrap gap-1.5 px-0.5 pb-1">
+                {Object.entries(FLAVORS[settings.notchFlavor ?? DEFAULT_FLAVOR].accents).map(([name, hex]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    title={name}
+                    aria-label={name}
+                    onClick={(e) => {
+                      halt(e)
+                      set('notchAccent', hex)
+                    }}
+                    className={`h-[18px] w-[18px] rounded-full border ${settings.notchAccent === hex ? 'border-white' : 'border-white/15'}`}
+                    style={{ background: hex }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  aria-label="Custom accent"
+                  value={settings.notchAccent ?? FLAVORS[settings.notchFlavor ?? DEFAULT_FLAVOR].accents.Mauve}
+                  onChange={(e) => set('notchAccent', e.target.value)}
+                  className="h-[18px] w-[26px] cursor-pointer rounded-[5px] border border-white/10 bg-transparent"
+                />
+              </div>
+            }
+          />
+          <Row title="Opacity" detail={`${Math.round((settings.notchOpacity ?? DEFAULT_OPACITY) * 100)}%`}>
+            <input
+              type="range"
+              min={0.2}
+              max={1}
+              step={0.05}
+              aria-label="Notch opacity"
+              value={settings.notchOpacity ?? DEFAULT_OPACITY}
+              onChange={(e) => set('notchOpacity', Number(e.target.value))}
+              className="w-[110px]"
+            />
+          </Row>
+          {settings.notchStyle === 'glass' && !nativeGlass && (
+            <Row title="Blur" detail={`${settings.notchBlur ?? DEFAULT_BLUR}px`}>
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={2}
+                aria-label="Glass blur"
+                value={settings.notchBlur ?? DEFAULT_BLUR}
+                onChange={(e) => set('notchBlur', Number(e.target.value))}
+                className="w-[110px]"
+              />
+            </Row>
+          )}
+        </Group>
+      </>
+    ),
+    look: (
+      <>
+        <Group>
           <Row title="Music glow">
             <Switch label="Ambient glow" on={settings.ambientVideo} onChange={(v) => set('ambientVideo', v)} />
           </Row>
@@ -820,12 +959,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange
               so under Glass this is on and cannot be turned off. */}
           <Row
             title="Hide in screenshots"
-            detail={settings.notchStyle !== 'black' ? 'Always on with Glass' : 'Also screen recordings and sharing'}
+            detail={settings.notchStyle === 'glass' && !nativeGlass ? 'Always on with Glass' : 'Also screen recordings and sharing'}
           >
             <Switch
               label="Hide in screenshots"
-              on={settings.notchStyle !== 'black' || (settings.hideInScreenshots ?? false)}
-              disabled={settings.notchStyle !== 'black'}
+              on={(settings.notchStyle === 'glass' && !nativeGlass) || (settings.hideInScreenshots ?? false)}
+              disabled={settings.notchStyle === 'glass' && !nativeGlass}
               onChange={(v) => set('hideInScreenshots', v)}
             />
           </Row>

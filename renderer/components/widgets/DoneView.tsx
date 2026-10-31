@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion } from 'motion/react'
 import { BotAvatar } from 'bot-avatars'
+import { CatppuccinCat } from './CatppuccinCat'
+import type { Flavor } from '../../lib/catppuccin'
 import { CALM } from './CompanionTile'
 import { lengthSeconds } from '../../lib/focus'
 import type { Timer } from '../../hooks/useTimer'
@@ -23,10 +25,11 @@ export const DoneView: React.FC<{
   timer: Timer
   minutes: number
   avatar: Avatar
+  flavor: Flavor
   photo: string | null
   accent: string
   onDone: () => void
-}> = ({ timer, minutes, avatar, photo, accent, onDone }) => {
+}> = ({ timer, minutes, avatar, flavor, photo, accent, onDone }) => {
   const secs = Math.round(timer.durationMs / 1000)
   const went = secs < 60 ? `${secs} sec` : `${Math.round(secs / 60)} min`
   const [cheer] = React.useState(() => CHEERS[Math.floor(Math.random() * CHEERS.length)])
@@ -45,7 +48,7 @@ export const DoneView: React.FC<{
           {avatar === 'photo' ? (
             photo && <img src={photo} alt="" className="h-[44px] w-[44px] rounded-full object-cover" />
           ) : (
-            <BotAvatar type={avatar} size={48} theme="dark" state="working" {...CALM} />
+            avatar === 'catppuccin' ? <CatppuccinCat size={48} coat={accent} flavor={flavor} state="working" {...CALM} /> : <BotAvatar type={avatar} size={48} theme="dark" state="working" {...CALM} />
           )}
         </motion.div>
         <motion.div

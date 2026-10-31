@@ -5,7 +5,9 @@ import { time12 } from '../../lib/time'
 import type { NowPlaying } from '../../hooks/useNowPlaying'
 import type { TaskStore } from '../../hooks/useTasks'
 import type { Timer } from '../../hooks/useTimer'
-import { BotAvatar, botAvatarPalette } from 'bot-avatars'
+import { BotAvatar } from 'bot-avatars'
+import { CatppuccinCat } from '../widgets/CatppuccinCat'
+import type { Flavor } from '../../lib/catppuccin'
 import type { Avatar } from '../widgets/SettingsPanel'
 import type { ProviderLimits } from '../../hooks/useAiLimits'
 import type { PrivacyState } from '../../hooks/usePrivacy'
@@ -57,6 +59,8 @@ interface CollapsedStatusProps {
   timer: Timer
   /** The companion, for its colour (the focus ring); not drawn in the bar. */
   avatar?: Avatar | null
+  accent?: string
+  flavor?: Flavor
   photo?: string | null
   /** The right side: the time, the AI limits as rings, or ScreenWise's screen time. */
   right: 'time' | 'ai' | 'screen'
@@ -219,7 +223,7 @@ const clock = (ms: number) => {
  * music (just the art and a pulse — the title was a status line nobody read),
  * then what is left to do.
  */
-const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avatar, photo, right, screenMs, limits, privacy, battery, cutout }) => {
+const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avatar, accent, flavor, photo, right, screenMs, limits, privacy, battery, cutout }) => {
   const focusing = timer.isRunning
   const isPlaying = !focusing && Boolean(nowPlaying?.isPlaying)
   // On a cutout the left wing is for events; the idle time goes to the right.
@@ -235,7 +239,7 @@ const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avat
           photo && <img src={photo} alt="" className="h-[18px] w-[18px] shrink-0 rounded-full object-cover" />
         ) : (
           <span className="grid shrink-0 place-items-center" aria-label="DeskNotch is active">
-            <BotAvatar type={avatar} size={20} theme="dark" />
+            {avatar === 'catppuccin' ? <CatppuccinCat size={20} coat={accent ?? '#cba6f7'} flavor={flavor} still /> : <BotAvatar type={avatar} size={20} theme="dark" />}
           </span>
         ))}
       {/* Nothing running and nothing playing: the time takes the left. */}
@@ -272,7 +276,7 @@ const Status: React.FC<CollapsedStatusProps> = ({ nowPlaying, tasks, timer, avat
                 cy="6"
                 r="4.5"
                 fill="none"
-                stroke={avatar && avatar !== 'photo' ? botAvatarPalette[avatar] : 'white'}
+                stroke={avatar && avatar !== 'photo' && accent ? accent : 'white'}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 4.5}
