@@ -593,6 +593,8 @@ export default function HomePage() {
                       flavor={flavor}
                       photo={photo}
                       accent={accent}
+                      look={motionOn.look}
+                      react={motionOn.react}
                       onSnooze={() => {
                         reminders.snooze(ringing.id, 5)
                         endRing()
@@ -616,6 +618,8 @@ export default function HomePage() {
                       flavor={flavor}
                       photo={photo}
                       accent={accent}
+                      look={motionOn.look}
+                      react={motionOn.react}
                       onDone={() => {
                         setHoldOpen(false)
                         setCloseKey((k) => k + 1)

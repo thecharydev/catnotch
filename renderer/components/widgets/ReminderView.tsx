@@ -25,9 +25,12 @@ export const ReminderView: React.FC<{
   flavor: Flavor
   photo: string | null
   accent: string
+  /** The companion's motion switches. */
+  look: boolean
+  react: boolean
   onSnooze: () => void
   onDismiss: () => void
-}> = ({ reminder, avatar, flavor, photo, accent, onSnooze, onDismiss }) => (
+}> = ({ reminder, avatar, flavor, photo, accent, look, react, onSnooze, onDismiss }) => (
   <div className="flex h-full items-center justify-center gap-4" onClick={(event) => event.stopPropagation()}>
     {/* The companion, ringing. */}
     <div className="relative grid h-[84px] w-[84px] shrink-0 place-items-center">
@@ -51,7 +54,7 @@ export const ReminderView: React.FC<{
         {avatar === 'photo' ? (
           photo && <img src={photo} alt="" className="h-[52px] w-[52px] rounded-full object-cover" />
         ) : (
-          avatar === 'catppuccin' ? <CatppuccinCat size={56} coat={accent} flavor={flavor} state="working" {...CALM} /> : <BotAvatar type={avatar} size={56} theme="dark" state="working" {...CALM} />
+          avatar === 'catppuccin' ? <CatppuccinCat size={56} coat={accent} flavor={flavor} state={react ? 'working' : 'default'} interactive={look} {...CALM} turn={look ? CALM.turn : 0} /> : <BotAvatar type={avatar} size={56} theme="dark" state={react ? 'working' : 'default'} interactive={look} {...CALM} turn={look ? CALM.turn : 0} />
         )}
       </motion.div>
       {/* The bell, swinging from its top like a real one. */}
