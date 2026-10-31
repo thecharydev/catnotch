@@ -2,5 +2,5 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   esbuild: { jsx: 'automatic' },
-  test: { environment: 'jsdom', include: ['renderer/**/*.test.{ts,tsx}'] },
+  test: { environment: 'jsdom', include: ['renderer/**/*.test.{ts,tsx}', 'main/**/*.test.ts'] },
 })

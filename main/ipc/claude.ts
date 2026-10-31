@@ -501,13 +501,12 @@ export async function startClaudeServer() {
   if (!stored?.enabled || server) return
   const got = await listen(stored.port || BASE_PORT)
   if (!got) return console.error('[claude] no free port')
-  if (got !== stored.port) {
-    save({ ...stored, port: got })
-    try {
-      edit(true)
-    } catch (error) {
-      console.error('[claude] could not move the hooks to the new port:', error)
-    }
+  if (got !== stored.port) save({ ...stored, port: got })
+  // Always re-sync: settings.json can point at an older port (another instance moved it), and Claude then fails silently.
+  try {
+    edit(true)
+  } catch (error) {
+    console.error('[claude] could not sync the hooks to the port:', error)
   }
 }
 

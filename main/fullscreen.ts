@@ -217,10 +217,10 @@ const TERMINALS = new Set([
 
 /** Whether a terminal is in front, where a CLI session is already asking. VS Code never counts:
  *  the extension's prompt sits in a side panel and is easy to miss, so its questions show on the notch. */
-export function claudeIsInFront(source: 'cli' | 'vscode' | 'unknown') {
-  const app = (lastRawResult.split(',')[5] ?? '').toLowerCase()
-  return source !== 'vscode' && TERMINALS.has(app)
-}
+export const isTerminalInFront = (raw: string, source: 'cli' | 'vscode' | 'unknown') =>
+  source !== 'vscode' && TERMINALS.has((raw.split(',')[5] ?? '').toLowerCase())
+
+export const claudeIsInFront = (source: 'cli' | 'vscode' | 'unknown') => isTerminalInFront(lastRawResult, source)
 
 /** Whether this notch is tucked right now, for a renderer that just loaded. */
 export const isTucked = (windowId: number) => tucked.get(windowId) ?? false

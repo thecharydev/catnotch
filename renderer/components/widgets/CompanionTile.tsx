@@ -720,9 +720,9 @@ export const CompanionTile: React.FC<CompanionTileProps> = ({
               <motion.div style={{ x, y, rotate }}>
                 <motion.div {...idleMove}>
                   {avatar === 'catppuccin' ? (
-                    <CatppuccinCat size={84} coat={accent} flavor={flavor} state={state} {...CALM} />
+                    <CatppuccinCat size={84} coat={accent} flavor={flavor} state={state} interactive={look} {...CALM} turn={look ? CALM.turn : 0} />
                   ) : (
-                    <BotAvatar type={avatar} size={84} theme="dark" state={state} {...CALM} />
+                    <BotAvatar type={avatar} size={84} theme="dark" state={state} interactive={look} {...CALM} turn={look ? CALM.turn : 0} />
                   )}
                 </motion.div>
               </motion.div>
