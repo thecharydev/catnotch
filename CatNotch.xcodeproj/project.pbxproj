@@ -593,7 +593,7 @@
 				INFOPLIST_KEY_NSLocationUsageDescription = "CatNotch reads the name of your Wi-Fi network to show it. macOS keeps it back unless Location is allowed. Your location is never read or stored.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CatNotch reads the name of your Wi-Fi network to show it. macOS keeps it back unless Location is allowed. Your location is never read or stored.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.thecharydev.catnotch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -616,7 +616,7 @@
 				INFOPLIST_KEY_NSLocationUsageDescription = "CatNotch reads the name of your Wi-Fi network to show it. macOS keeps it back unless Location is allowed. Your location is never read or stored.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "CatNotch reads the name of your Wi-Fi network to show it. macOS keeps it back unless Location is allowed. Your location is never read or stored.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.thecharydev.catnotch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
