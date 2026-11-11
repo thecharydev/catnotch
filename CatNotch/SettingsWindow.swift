@@ -2,6 +2,9 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 import CatNotchCore
+import os
+
+private let loginLogger = Logger(subsystem: "com.thecharydev.catnotch", category: "login")
 
 /// The one line of how a reading is got, with the whole list under a disclosure.
 private struct SourceNote: View {
@@ -444,7 +447,7 @@ private struct SettingsView: View {
         do {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
         } catch {
-            print("[login] could not turn open at login \(on ? "on" : "off"):", error)
+            loginLogger.error("Could not turn open at login \(on ? "on" : "off", privacy: .public) (code: \((error as NSError).code, privacy: .public))")
         }
         opensAtLogin = SMAppService.mainApp.status == .enabled
     }

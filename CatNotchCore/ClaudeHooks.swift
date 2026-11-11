@@ -1,5 +1,8 @@
 import Foundation
 import Network
+import os
+
+private let claudeLogger = Logger(subsystem: "com.thecharydev.catnotch", category: "claude")
 
 /// Claude Code on the Notch: when Claude wants to run a tool, or asks a question, its hooks call this small
 /// server and the Notch shows it. The click comes back as the hook's reply. Anything that goes wrong (no answer
@@ -418,8 +421,15 @@ public final class ClaudeHooks {
     /// Always re-synced: settings.json can hold an older port (another instance moved it), and Claude then fails silently.
     public func start() async {
         guard setting.enabled, !isRunning else { return }
-        guard await run() else { return print("[claude] no free port") }
-        do { try ClaudeSettingsFile.edit(settingsFile, add: true, port: port, token: setting.token) } catch { print("[claude] could not sync the hooks to the port:", error) }
+        guard await run() else {
+            claudeLogger.error("No free port for the Claude hook server")
+            return
+        }
+        do {
+            try ClaudeSettingsFile.edit(settingsFile, add: true, port: port, token: setting.token)
+        } catch {
+            claudeLogger.error("Could not sync hooks to the server port (code: \((error as NSError).code, privacy: .public))")
+        }
     }
 
     /// Starts the server and writes the hook entries; `.invalid` leaves a settings file that is not JSON alone.

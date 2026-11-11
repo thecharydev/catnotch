@@ -1,4 +1,7 @@
 import Carbon.HIToolbox
+import os
+
+private let shortcutLogger = Logger(subsystem: "com.thecharydev.catnotch", category: "shortcut")
 
 /// A system wide shortcut. Carbon hot keys need no Accessibility permission.
 @MainActor
@@ -27,7 +30,9 @@ final class GlobalShortcut {
         let status = RegisterEventHotKey(UInt32(key), UInt32(modifiers),
                                          EventHotKeyID(signature: OSType(0x434E5348) /* CNSH */, id: id),
                                          GetApplicationEventTarget(), 0, &ref)
-        if status != noErr { print("[shortcut] \(name) is taken (status \(status)); it does nothing this launch") }
+        if status != noErr {
+            shortcutLogger.warning("Shortcut \(name, privacy: .public) could not be registered (status: \(status, privacy: .public)); it does nothing this launch")
+        }
     }
 
     func unregister() {

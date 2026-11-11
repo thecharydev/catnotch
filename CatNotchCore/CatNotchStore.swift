@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let storeLogger = Logger(subsystem: "com.thecharydev.catnotch", category: "store")
 
 /// Any JSON value. Settings are kept as these so the import loses nothing and later features read typed keys.
 public enum JSONValue: Codable, Equatable, Sendable {
@@ -174,7 +177,7 @@ public final class CatNotchStore {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(data).write(to: file, options: .atomic)
         } catch {
-            print("[store] write failed:", error)
+            storeLogger.error("Store write failed (code: \((error as NSError).code, privacy: .public))")
         }
     }
 }
