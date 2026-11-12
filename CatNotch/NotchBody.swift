@@ -705,7 +705,7 @@ struct NotchView: View {
                             if glance { GlanceRow(system: system) }
                             if let nextEvent { NextEventLine(event: nextEvent) }
                         }
-                        .task(id: usage.available) { if usage.available { await usage.poll() } } // looks again every 2 minutes while Home is open
+                        .task(id: usage.available) { if usage.available { await usage.poll() } } // looks again every 30 s while Home is open
                     } else if model.page == .calendar && agenda.showCalendar {
                         CalendarPage(agenda: agenda, tasks: tasks, month: Bindable(model).calendarMonth, selected: Bindable(model).calendarDay)
                     } else if model.page == .claude {
