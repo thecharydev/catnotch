@@ -22,8 +22,10 @@ final class UpdateModel {
         }
     }
 
+    var isInstalled: Bool { if case .installed = state { true } else { false } }
+
     func check() async {
-        guard !busy else { return }
+        guard !busy, !isInstalled else { return }
         state = .checking
         do {
             let (data, _) = try await URLSession.shared.data(from: URL(string: "\(Self.releases)/latest/download/latest-mac.yml")!)
@@ -36,7 +38,7 @@ final class UpdateModel {
         }
     }
 
-    /// Download, check, swap in and relaunch. Only ever called from the Update button.
+    /// Download, check and swap in, then wait for `restart()`. Only ever called from the Update button.
     private static var isDebugBuild: Bool {
         #if DEBUG
         true
@@ -64,7 +66,7 @@ final class UpdateModel {
             // Hashing and unzipping a large file blocks, so not on the main actor, or "Installing…" never paints.
             let installed = installed
             try await Task.detached { try UpdateInstall.install(zip: file, sha512: zip.sha512, installed: installed) }.value
-            relaunch()
+            state = .installed(version: next) // the user picks when to `restart()`
         } catch {
             state = .failed // the old app is still in place
         }
@@ -78,7 +80,7 @@ final class UpdateModel {
     }
 
     /// A detached `open` starts the new app once this process has exited (opening earlier would only focus it).
-    private func relaunch() {
+    func restart() {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", "while kill -0 $1 2>/dev/null; do sleep 0.2; done; /usr/bin/open \"$0\"", installed.path, String(ProcessInfo.processInfo.processIdentifier)]
