@@ -175,7 +175,7 @@ final class NotchPanel {
     /// `fileDrag`: a file is being dragged and the pointer is moving it. The Notch opens from further off, on Files,
     /// so the file can be dropped straight onto the shelf.
     func update(fileDrag: Bool = false) {
-        guard let screen else { return }
+        guard let screen, panel.alphaValue > 0 else { return } // hidden: no hover, no clicks
         defer { onKeysChanged() }
         let cursor = NSEvent.mouseLocation
         var inside = model.hover.isOpen(cursor: cursor, in: screen.frame, wasOpen: model.isOpen, dragging: fileDrag)
@@ -278,15 +278,21 @@ final class NotchPanel {
     }
 
     /// Hidden over a fullscreen app. Shown again it starts closed.
+    /// Hidden is alpha 0, not `orderOut`: an ordered out panel came back on the current Space only, so the other desktops lost the Notch (issue #49).
     func setHidden(_ hidden: Bool) {
         if hidden {
             pinned = false
-            panel.orderOut(nil)
-        } else if !panel.isVisible {
             model.isOpen = false
             panel.ignoresMouseEvents = true
-            panel.orderFrontRegardless()
-            update()
+            panel.alphaValue = 0
+        } else {
+            if panel.alphaValue == 0 {
+                model.isOpen = false
+                panel.ignoresMouseEvents = true
+                panel.alphaValue = 1
+                update()
+            }
+            panel.orderFrontRegardless() // also the first show; idempotent, no key change
         }
     }
 }

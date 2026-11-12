@@ -81,3 +81,10 @@ func nonTerminals(bundle: String) {
     #expect(!detect(CGRect(x: 0, y: 33, width: 1470, height: 857))) // maximised, Dock showing
     #expect(!detect(CGRect(x: 0, y: 34, width: 1470, height: 856)))
 }
+
+@Test func windowSplitIntoTabBarAndContentIsFullscreen() {
+    // Ghostty in fullscreen: a tab bar window and a content window, neither reaching both edges (issue #49).
+    let s = state([WindowInfo(pid: 10, layer: 0, bounds: CGRect(x: 0, y: 0, width: 1920, height: 40)),
+                   WindowInfo(pid: 10, layer: 0, bounds: CGRect(x: 0, y: 40, width: 1920, height: 1040))])
+    #expect(s.fullscreen && s.display == 1)
+}
