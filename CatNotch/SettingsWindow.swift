@@ -354,7 +354,9 @@ private struct SettingsView: View {
             LabeledContent("CatNotch \(update.version)") {
                 HStack {
                     Text(updateStatus).foregroundStyle(.secondary)
-                    if case .available(let version) = update.state {
+                    if update.isInstalled {
+                        Button("Restart now") { update.restart() }
+                    } else if case .available(let version) = update.state {
                         Button("Update to \(version)") { Task { await update.install() } }
                     } else if update.state == .failed {
                         Button("Try again") { Task { await update.install() } }
@@ -376,6 +378,7 @@ private struct SettingsView: View {
         case .available: "A new version is out"
         case .downloading(let percent): "Downloading \(percent)%"
         case .installing: "Installing…"
+        case .installed(let version): "\(version) installed. Restart to use it"
         case .unwritable: "Move CatNotch to Applications to update it"
         case .checkFailed: "Could not check for updates"
         case .failed: "Update failed"

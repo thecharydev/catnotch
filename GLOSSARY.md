@@ -17,7 +17,7 @@ A version tag on `thecharydev/catnotch` that publishes the native Apple silicon 
 _Avoid_: Windows release, Store release
 
 **Update**:
-Replacing the installed CatNotch with a newer Release when the user asks for it in Settings. Never happens without the user pressing the button.
+Replacing the installed CatNotch with a newer Release when the user asks for it in Settings. Never happens without the user pressing the button. The new version starts running only when the user restarts, which they choose after the install.
 _Avoid_: auto-update, upgrade
 
 **Bridge release**:

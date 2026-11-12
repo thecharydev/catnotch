@@ -65,7 +65,7 @@ final class NotchController {
                 MainActor.assumeIsolated {
                     self?.refreshForeground()
                     // The window list lags the Space switch animation; look again as it settles (a few one shots, not a poll).
-                    for delay in [0.3, 0.7, 1.4] {
+                    for delay in [0.3, 0.7, 1.4, 2.5] { // the fullscreen exit animation can outlast 1.4s (issue #49)
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { MainActor.assumeIsolated { self?.refreshForeground() } }
                     }
                 }
@@ -146,8 +146,12 @@ final class NotchController {
 
     private func refreshForeground() {
         guard let front = NSWorkspace.shared.frontmostApplication else { return }
-        // CatNotch itself in front (hovered or clicked): leave everything as it was.
-        if front.processIdentifier == ProcessInfo.processInfo.processIdentifier { return }
+        // CatNotch itself in front (hovered or clicked): leave everything as it was. Except a hidden Notch (issue #49):
+        // it can only be in front after a Space switch landed on us, and a stale fullscreen would keep the Notch hidden there.
+        if front.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+            if foreground?.fullscreen == true { foreground?.fullscreen = false; applyForeground() }
+            return
+        }
 
         let displays = NSScreen.screens.compactMap { screen in
             screen.displayID.map { DisplayBounds(id: $0, bounds: CGDisplayBounds($0), topInset: screen.safeAreaInsets.top) }

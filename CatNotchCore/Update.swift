@@ -30,6 +30,8 @@ public enum UpdateState: Equatable, Sendable {
     case available(version: String)
     case downloading(percent: Int)
     case installing
+    /// The new app is already in place; the old one runs until the user restarts.
+    case installed(version: String)
     case unwritable
     case failed
 }

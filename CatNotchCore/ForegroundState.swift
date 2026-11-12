@@ -50,10 +50,16 @@ public struct ForegroundState: Equatable, Sendable {
                 let area = overlap.isNull ? 0 : Double(overlap.width * overlap.height)
                 // A fullscreen hit sets best to infinity so no later overlap can change the display.
                 if area > best { best = area; display = d.id }
-                let (r, b) = (window.bounds, d.bounds)
-                if r.minX <= b.minX + 2 && r.minY <= b.minY + d.topInset + 2 && r.maxX >= b.maxX - 2 && r.maxY >= b.maxY - 2 {
-                    fullscreen = true; display = d.id; best = .infinity
-                }
+            }
+        }
+        // Some apps (Ghostty) split a fullscreen window in two, a tab bar and the content: only together do they reach both edges.
+        // ponytail: the union is a bounding box, so two tiled windows reaching opposite edges also count; add a gap check if that bites.
+        for d in displays {
+            let mine = windows.filter { $0.pid == pid && $0.layer == 0 && !d.bounds.intersection($0.bounds).isNull }
+            guard let first = mine.first else { continue }
+            let (r, b) = (mine.dropFirst().reduce(first.bounds) { $0.union($1.bounds) }, d.bounds)
+            if r.minX <= b.minX + 2 && r.minY <= b.minY + d.topInset + 2 && r.maxX >= b.maxX - 2 && r.maxY >= b.maxY - 2 {
+                fullscreen = true; display = d.id; break
             }
         }
         return ForegroundState(fullscreen: fullscreen, display: display, bundle: bundle)
