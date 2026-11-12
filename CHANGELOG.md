@@ -11,6 +11,20 @@ All notable changes to CatNotch. The format follows [Keep a Changelog](https://k
 ### Changed
 - GitHub Actions are pinned to commit SHAs, and the release workflow only gets write access in its release job.
 
+## [2.0.4] - 2026-11-12
+
+### Added
+- Claude sessions are named by their title (Claude's own title, else the start of your first message, else the folder), and each row shows the tool Claude is running, such as `Bash: swift test`.
+- The state of a session is a small animation instead of a word: a spinner while working, a squeezing dot while compacting, a slow amber pulse while waiting, a checkmark when done. Reduce Motion shows it still.
+- The notch opens briefly with "<title> finished" when a session finishes. The sound plays then, not for a new question.
+
+### Changed
+- AI usage refreshes when the notch opens.
+- The sound picker in Settings is "Sound when Claude finishes".
+
+### Fixed
+- A question or permission you answer in the terminal or VS Code now leaves the notch.
+
 ## [2.0.3] - 2026-11-12
 
 ### Added
