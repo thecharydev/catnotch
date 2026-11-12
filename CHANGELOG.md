@@ -11,6 +11,14 @@ All notable changes to CatNotch. The format follows [Keep a Changelog](https://k
 ### Changed
 - GitHub Actions are pinned to commit SHAs, and the release workflow only gets write access in its release job.
 
+## [2.0.3] - 2026-11-12
+
+### Added
+- An update now installs first and stops at "installed", and a Restart now button restarts into the new version when you choose.
+
+### Fixed
+- The notch no longer stays hidden on other desktops after leaving a fullscreen app, and it hides over fullscreen apps that split their window in two, such as Ghostty.
+
 ## [2.0.0] - 2026-11-09
 
 The native rewrite, and the Bridge release: it keeps the old `CatNotch-VERSION-universal-mac.zip` and `latest-mac.yml` names so installed 1.0.x apps can update to it.
