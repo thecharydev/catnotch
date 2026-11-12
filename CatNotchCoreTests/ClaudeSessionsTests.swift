@@ -58,14 +58,17 @@ private final class Clock: @unchecked Sendable {
     }
 
     @discardableResult
-    func event(_ name: String, trigger: String? = nil) -> Bool {
+    func event(_ name: String, trigger: String? = nil, tool: String? = nil, input: [String: Any] = [:]) -> Bool {
         var body: [String: Any] = ["hook_event_name": name, "session_id": "sess", "cwd": "/work/proj", "transcript_path": transcript.path]
         if let trigger { body["trigger"] = trigger }
+        if let tool { body["tool_name"] = tool; body["tool_input"] = input }
         return sessions.seen(body)
     }
 
     var state: ClaudeSession.State? { sessions.list.first?.state }
     var last: String? { sessions.list.first?.last }
+    var title: String? { sessions.list.first?.title }
+    var activity: String? { sessions.list.first?.activity }
 }
 
 @MainActor @Suite struct ClaudeSessionStates {
@@ -76,7 +79,7 @@ private final class Clock: @unchecked Sendable {
         #expect(w.state == .compacting)
         w.event("PostCompact", trigger: "auto") // mid turn: the turn goes on
         #expect(w.state == .working)
-        #expect(w.event("Stop") && w.state == .idle) // a turn ended: the moment for the sound
+        #expect(w.event("Stop") && w.state == .done) // a turn ended: the moment for the banner and sound
         #expect(!w.event("Stop")) // already idle: nothing ended
         w.event("PreCompact", trigger: "manual")
         #expect(w.state == .compacting)
@@ -100,7 +103,7 @@ private final class Clock: @unchecked Sendable {
         let w = try World(); defer { w.finish() }
         try w.write("{\"entrypoint\":\"claude-vscode\",\"cwd\":\"/work/proj\"}\n")
         w.sessions.scan() // no hook event yet: found from Claude's own file
-        #expect(w.sessions.list == [ClaudeSession(id: "sess", project: "proj", source: .vscode, state: .idle, at: w.sessions.list[0].at, last: "build it")])
+        #expect(w.sessions.list == [ClaudeSession(id: "sess", project: "proj", source: .vscode, state: .idle, at: w.sessions.list[0].at, last: "build it", title: "build it")])
         #expect(w.sessions.pid(of: "sess") == Int(getpid()))
         w.clock.alive = false // its process is gone
         w.sessions.scan()
@@ -223,5 +226,66 @@ private final class Clock: @unchecked Sendable {
         #expect(ClaudeFocus.appPath(pid: 900, ps: ps) == nil)
         #expect(ClaudeFocus.appPath(pid: 31337, ps: ps) == nil)
         #expect(ClaudeFocus.appPath(pid: 4242, ps: "") == nil)
+    }
+}
+
+// Spec 0042: a session is named by its title and shows the tool it is running.
+@MainActor @Suite struct ClaudeTitleAndActivity {
+    @Test func theTitleIsTheNewestAiTitleElseTheFirstMessageCutTo50ElseTheFolder() throws {
+        let w = try World(); defer { w.finish() }
+        w.sessions.scan()
+        #expect(w.title == "build it") // the first message (World writes it)
+        try w.write("{\"type\":\"ai-title\",\"aiTitle\":\"Old name\"}\n" + w.entry("assistant", "ok") + "{\"type\":\"ai-title\",\"aiTitle\":\"New name\"}\n")
+        w.sessions.scan()
+        #expect(w.title == "New name") // retitled: the newest wins
+        let empty = try World(); defer { empty.finish() }
+        try FileManager.default.removeItem(at: empty.transcript)
+        empty.sessions.scan()
+        #expect(empty.title == "proj")
+    }
+
+    @Test func aLongFirstMessageIsCutTo50AndAnEchoIsNotAMessage() throws {
+        let w = try World(); defer { w.finish() }
+        try FileManager.default.removeItem(at: w.transcript) // start over with these two lines only
+        try w.write(w.entry("user", "<command-name>/clear</command-name>") + w.entry("user", String(repeating: "word ", count: 30)))
+        w.sessions.scan()
+        #expect(w.title?.count == 50 && w.title?.hasPrefix("word word") == true)
+    }
+
+    @Test func theToolShowsWhileWorkingAndClearsOnPostToolUseStopAndInterrupt() throws {
+        let w = try World(); defer { w.finish() }
+        w.event("UserPromptSubmit")
+        #expect(w.activity == "")
+        w.event("PreToolUse", tool: "Bash", input: ["command": "swift test"])
+        #expect(w.activity == "Bash: swift test")
+        w.event("PostToolUse", tool: "Bash", input: ["command": "swift test"])
+        #expect(w.activity == "")
+        w.event("PreToolUse", tool: "Read", input: ["file_path": "/work/proj/a.swift"])
+        #expect(w.activity == "Read: a.swift")
+        w.event("Stop")
+        #expect(w.activity == "")
+        w.event("UserPromptSubmit")
+        w.event("PreToolUse", tool: "Bash", input: ["command": "sleep 99"])
+        try w.write(w.marker()) // Esc: no hook event, the transcript says so
+        w.sessions.scan()
+        #expect(w.state == .idle && w.activity == "")
+    }
+}
+
+@Suite struct ClaudeActivityText {
+    @Test(arguments: [
+        ("Bash", ["command": "swift   test\n  -v"], "Bash: swift test -v"),
+        ("Edit", ["file_path": "/a/b/ClaudeViews.swift"], "Edit: ClaudeViews.swift"),
+        ("Grep", ["pattern": "onTurnEnd"], "Grep: onTurnEnd"),
+        ("WebFetch", ["url": "https://x.dev/a"], "WebFetch: https://x.dev/a"),
+        ("mcp__claude_ai_Slack__send_message", ["channel": "c"], "send_message"),
+        ("TodoWrite", ["todos": "x"], "TodoWrite"),
+    ])
+    func formatsTheToolInputPerTool(tool: String, input: [String: String], text: String) {
+        #expect(ClaudeActivity.describe(tool: tool, input: input) == text)
+    }
+
+    @Test func aLongCommandIsCut() {
+        #expect(ClaudeActivity.describe(tool: "Bash", input: ["command": String(repeating: "x", count: 500)]).count == 100)
     }
 }

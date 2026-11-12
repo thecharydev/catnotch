@@ -74,6 +74,10 @@ public final class ClaudeHooks {
         var held: Set<Hold> = []
         /// Claude's `permission_suggestions`, handed back as `updatedPermissions` for `.always`.
         var suggestions: [Any] = []
+        /// What a finished tool must match to drop this request: `tool_use_id` for a question, tool and input for a permission.
+        var toolUseId = ""
+        var tool = ""
+        var input = ""
     }
 
     /// Why the 60 s timer is off: an answer is being typed, or the pointer is on the request.
@@ -87,8 +91,9 @@ public final class ClaudeHooks {
     public var requests: [ClaudeRequest] { waiting.map(\.view) }
     /// Called with the queue whenever it changes.
     public var onChange: ([ClaudeRequest]) -> Void = { _ in }
-    /// Called when a turn ends (`Stop` on a session that was working): the moment for the sound.
-    public var onTurnEnd: () -> Void = {}
+    /// Called with the session id and title (spec 0042) when a turn ends (`Stop` on a session that was working), unless that
+    /// session's terminal is in front: the moment for the banner and the sound (spec 0040).
+    public var onTurnEnd: (_ id: String, _ title: String) -> Void = { _, _ in }
     /// The live port, 0 while not running.
     public private(set) var port = 0
     public var isRunning: Bool { port != 0 }
@@ -225,7 +230,12 @@ public final class ClaudeHooks {
         let json = (try? JSONSerialization.jsonObject(with: body.prefix(length))) as? [String: Any]
         guard let json, route != "event" else {
             reply(connection, [:]) // reports never wait, and a body we cannot read gets Claude's own prompt
-            if let json, ClaudeSettingsFile.reporting.contains(Self.text(json["hook_event_name"], max: 40)), sessions.seen(json) { onTurnEnd() }
+            if let json, Self.text(json["hook_event_name"], max: 40) == "PostToolUse" { dropAnswered(json) }
+            if let json, ClaudeSettingsFile.reporting.contains(Self.text(json["hook_event_name"], max: 40)), sessions.seen(json),
+               !isTerminalInFront(sourceOf(transcript: Self.text(json["transcript_path"], max: 1000))) {
+                let id = Self.text(json["session_id"], max: 100)
+                onTurnEnd(id, sessions.list.first { $0.id == id }?.title ?? "Claude")
+            }
             return true
         }
         add(route, json, connection)
@@ -327,9 +337,26 @@ public final class ClaudeHooks {
         let project = URL(fileURLWithPath: Self.text(body["cwd"], max: 1000)).lastPathComponent
         let suggestions = route == "permission" ? Array((body["permission_suggestions"] as? [Any] ?? []).prefix(Self.maxSuggestions)) : []
         let view = ClaudeRequest(id: id, sessionId: Self.text(body["session_id"], max: 100), project: project.isEmpty || project == "/" ? "Claude" : project, kind: kind, always: !suggestions.isEmpty)
-        waiting.append(Waiting(view: view, connection: connection, timer: timer(id), suggestions: suggestions))
+        var item = Waiting(view: view, connection: connection, timer: timer(id), suggestions: suggestions)
+        item.tool = tool
+        if route == "permission" { item.input = Self.canonical(input) } else { item.toolUseId = Self.text(body["tool_use_id"], max: 100) }
+        waiting.append(item)
         watch(connection, id)
         changed()
+    }
+
+    private static func canonical(_ input: [String: Any]) -> String {
+        (try? JSONSerialization.data(withJSONObject: input, options: [.sortedKeys, .withoutEscapingSlashes])).map { String(decoding: $0, as: UTF8.self) } ?? ""
+    }
+
+    /// A tool finished, so whoever answered did it elsewhere (CLI, VS Code): drop the request it matches (spec 0039).
+    private func dropAnswered(_ body: [String: Any]) {
+        let session = Self.text(body["session_id"], max: 100), tool = Self.text(body["tool_name"], max: 80)
+        let useId = Self.text(body["tool_use_id"], max: 100), input = Self.canonical(body["tool_input"] as? [String: Any] ?? [:])
+        for item in waiting where item.view.sessionId == session {
+            let same = item.toolUseId.isEmpty ? (item.tool == tool && item.input == input) : item.toolUseId == useId
+            if same { leave(item.view.id).map { reply($0.connection, [:]) } }
+        }
     }
 
     /// The queue changed: the sessions with a request waiting show as such, and the Notch is told.

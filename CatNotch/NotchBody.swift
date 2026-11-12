@@ -642,8 +642,10 @@ struct NotchView: View {
         let wing = NotchSize.wing(content: max(leftWidth, rightWidth)) // fitted to what the closed Notch shows
         let glance = !system.bluetooth.isEmpty || system.micInUse || system.cameraInUse
         let request = claude.requests.first
-        let stripOnly = model.peek && request != nil
-        let content = request.map { NotchLayout.withStrip(stripOnly ? nil : pageContent(glance: glance), strip: $0.stripHeight(open: claude.open)) } ?? pageContent(glance: glance)
+        let finished = request == nil ? claude.finished : nil
+        let stripOnly = model.peek && (request != nil || finished != nil)
+        let stripHeight = request?.stripHeight(open: claude.open) ?? finished.map { _ in NotchLayout.claudeFinished }
+        let content = stripHeight.map { NotchLayout.withStrip(stripOnly ? nil : pageContent(glance: glance), strip: $0) } ?? pageContent(glance: glance)
         let wanted = NotchLayout.open(content: content, closedHeight: closed.height)
         // On a hardware notch the closed shape overlaps the real one a little, so no edge of it shows around ours.
         let bleed = model.cutout > 0 ? NotchLayout.cutoutBleed : 0
@@ -682,6 +684,7 @@ struct NotchView: View {
             if model.isOpen {
                 VStack(spacing: NotchLayout.gap) {
                     if let request { ClaudeStrip(request: request, count: claude.requests.count, accent: Color(hex: model.character.accent(flavor: model.flavor, coat: model.coat)), claude: claude).id(request.id) }
+                    if let finished { ClaudeFinishedBanner(title: finished.title, accent: Color(hex: model.character.accent(flavor: model.flavor, coat: model.coat)), claude: claude) }
                     if stripOnly {
                         // the request alone: the page waits for the pointer
                     } else if model.page == .desk {

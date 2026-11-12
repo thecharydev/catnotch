@@ -338,7 +338,7 @@ private struct SettingsView: View {
         Section("Claude Code") {
             Toggle("Show Claude Code prompts on the Notch", isOn: Binding(get: { claude.enabled }, set: { claude.setEnabled($0) }))
             if claude.enabled {
-                Picker("Sound when Claude needs you", selection: Binding(get: { claude.sound ?? "" }, set: { claude.setSound($0.isEmpty ? nil : $0) })) {
+                Picker("Sound when Claude finishes", selection: Binding(get: { claude.sound ?? "" }, set: { claude.setSound($0.isEmpty ? nil : $0) })) {
                     Text("None").tag("")
                     ForEach(ClaudeSounds.all, id: \.self) { Text($0).tag($0) }
                 }

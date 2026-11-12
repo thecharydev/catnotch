@@ -23,3 +23,11 @@ _Avoid_: auto-update, upgrade
 **Bridge release**:
 The first native Release (2.0.0), published under the old Electron update file names so installed 1.0.x apps can still find and install it.
 _Avoid_: migration release, v2 build
+
+**Request**:
+A question or a tool permission that Claude Code is waiting on, shown on the Notch until it is answered. Answering it on the Notch, or approving or answering it in the terminal or VS Code, ends it. Denying or pressing Esc elsewhere is not noticed; the Request then leaves on its own after about a minute.
+_Avoid_: prompt, notification, card
+
+**Session**:
+A Claude Code conversation, shown as one row on the Notch and named by its title. The title is Claude's latest generated title for it, else the start of the user's first message, else the folder name.
+_Avoid_: instance, Claude row, project (for the name)
