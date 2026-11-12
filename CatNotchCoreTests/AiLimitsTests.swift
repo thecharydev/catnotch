@@ -193,12 +193,12 @@ func aFailedCheckWithNothingBeforeIsUnavailable(reply: Result<(Data, Int), URLEr
     #expect(claudeOnly(await reader.read()) == .failed(.expired))
 }
 
-@Test func checksCloserThanAMinuteReuseTheReading() async {
+@Test func checksCloserThanFifteenSecondsReuseTheReading() async {
     let server = Server(), clock = Clock()
     await server.say(claudeHost, ok(claudeBody))
     let reader = makeReader(server, clock, signedIn: [.claude])
     _ = await reader.read()
-    clock.advance(59)
+    clock.advance(14)
     _ = await reader.read()
     _ = await reader.read(force: true) // even a retry: the reading is that fresh
     #expect(await server.calls[claudeHost] == 1)

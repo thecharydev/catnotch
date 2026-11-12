@@ -2,7 +2,7 @@ import Foundation
 
 /// One Claude Code session, as the Claude page lists it (spec 0033).
 public struct ClaudeSession: Equatable, Identifiable, Sendable {
-    public enum State: Equatable, Sendable { case working, compacting, idle, waiting }
+    public enum State: Equatable, Sendable { case working, compacting, idle, waiting, done }
     public var id: String
     public var project: String
     public var source: ClaudeSource
@@ -11,6 +11,10 @@ public struct ClaudeSession: Equatable, Identifiable, Sendable {
     public var at: Date
     /// What you last typed, on one line, 120 characters at most.
     public var last: String
+    /// What names it: Claude's latest title for it, else the start of your first message, else the folder (spec 0042).
+    public var title: String = ""
+    /// The tool it is running right now, as "Bash: swift test". Empty unless it is working.
+    public var activity: String = ""
 }
 
 /// What Claude writes to a session's transcript (`<config dir>/projects/<folder>/<id>.jsonl`, one JSON object a line).
@@ -48,17 +52,55 @@ enum ClaudeTranscript {
         return (formatter.date(from: stamp) ?? .distantPast) >= since
     }
 
-    /// The last thing you typed, on one line. Slash command echoes and the interrupt marker are not something you typed.
-    static func lastSaid(_ path: String, limit: Int = 120) -> String {
-        var said = ""
-        for entry in tail(path, bytes: 256 * 1024) where entry["type"] as? String == "user" && entry["isSidechain"] as? Bool != true && entry["isMeta"] as? Bool != true {
-            for text in texts(entry) {
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty || trimmed.hasPrefix("<command-") || trimmed.hasPrefix("<local-command") || trimmed.hasPrefix("Caveat:") || trimmed.hasPrefix(interrupt) { continue }
-                said = trimmed
-            }
+    /// What you typed in a user entry, one string a text block. Sidechains, slash command echoes and the interrupt marker are not.
+    private static func typed(_ entry: [String: Any]) -> [String] {
+        guard entry["type"] as? String == "user", entry["isSidechain"] as? Bool != true, entry["isMeta"] as? Bool != true else { return [] }
+        return texts(entry).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter {
+            !($0.isEmpty || $0.hasPrefix("<command-") || $0.hasPrefix("<local-command") || $0.hasPrefix("Caveat:") || $0.hasPrefix(interrupt))
         }
-        return String(said.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(limit))
+    }
+
+    private static func oneLine(_ text: String, limit: Int) -> String { String(text.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(limit)) }
+
+    /// The last thing you typed, on one line.
+    static func lastSaid(_ path: String, limit: Int = 120) -> String {
+        oneLine(tail(path, bytes: 256 * 1024).flatMap(typed).last ?? "", limit: limit)
+    }
+
+    /// The first thing you typed, from the head of the file: the name of a session Claude has not titled yet.
+    static func firstSaid(_ path: String, limit: Int = 50) -> String {
+        guard let handle = FileHandle(forReadingAtPath: path), let data = try? handle.read(upToCount: 65536) else { return "" }
+        try? handle.close()
+        let lines = data.split(separator: UInt8(ascii: "\n")) // a line cut at 64KB just fails to parse
+        let entries = lines.compactMap { (try? JSONSerialization.jsonObject(with: $0)) as? [String: Any] }
+        return oneLine(entries.flatMap(typed).first ?? "", limit: limit)
+    }
+
+    /// Claude's own title for the session: the newest `ai-title` entry (they repeat through the file as it is retitled).
+    static func aiTitle(_ path: String) -> String {
+        let title = tail(path, bytes: 256 * 1024).last { $0["type"] as? String == "ai-title" }?["aiTitle"] as? String
+        return oneLine(title ?? "", limit: 100)
+    }
+}
+
+/// The tool a session is running, as one short line for its row (spec 0042).
+public enum ClaudeActivity {
+    public static func describe(tool: String, input: [String: Any]) -> String {
+        func field(_ key: String) -> String? { (input[key] as? String).map { $0.split(whereSeparator: \.isWhitespace).joined(separator: " ") } }
+        let detail: String?
+        switch tool {
+        case "Bash": detail = field("command")
+        case "Read", "Edit", "Write", "MultiEdit": detail = field("file_path").map { URL(fileURLWithPath: $0).lastPathComponent }
+        case "NotebookEdit": detail = field("notebook_path").map { URL(fileURLWithPath: $0).lastPathComponent }
+        case "Grep", "Glob": detail = field("pattern")
+        case "WebFetch": detail = field("url")
+        case "WebSearch": detail = field("query")
+        case "Task", "Agent": detail = field("description")
+        default: detail = nil
+        }
+        // An MCP tool is "mcp__server__name": the name is what says what it does.
+        let name = tool.hasPrefix("mcp__") ? String(tool.components(separatedBy: "__").last ?? tool) : tool
+        return String((detail.map { "\(name): \($0)" } ?? name).prefix(100))
     }
 }
 
@@ -79,6 +121,9 @@ public final class ClaudeSessions {
         var checked = Date.distantPast
         var tailed = Date.distantPast
         var last = ""
+        var aiTitle = ""
+        var firstSaid = ""
+        var activity = ""
         var pid = 0
         init(id: String) { self.id = id }
     }
@@ -96,6 +141,11 @@ public final class ClaudeSessions {
     public var onChange: ([ClaudeSession]) -> Void = { _ in }
     /// The sessions with a request waiting on a click: they show as `waiting`, and are not judged interrupted.
     public var waiting: Set<String> = [] { didSet { if waiting != oldValue { emit() } } }
+
+    /// Sessions that finished a turn and have not been looked at since: they show as `done` instead of `idle`.
+    public private(set) var done: Set<String> = []
+    /// The user looked at the list: "Done" goes back to idle.
+    public func markSeen() { if !done.isEmpty { done = []; emit() } }
 
     public init(configDir: URL, now: @escaping () -> Date = Date.init, alive: @escaping (Int) -> Bool = ClaudeSessions.isAlive, staleAfter: TimeInterval = 600) {
         self.configDir = configDir
@@ -116,8 +166,10 @@ public final class ClaudeSessions {
         entries.values
             .map { e in
                 let project = e.cwd.isEmpty ? "" : URL(fileURLWithPath: e.cwd).lastPathComponent
-                let state: ClaudeSession.State = waiting.contains(e.id) ? .waiting : e.phase == .working ? .working : e.phase == .compacting ? .compacting : .idle
-                return ClaudeSession(id: e.id, project: project.isEmpty || project == "/" ? "Claude" : project, source: e.source, state: state, at: max(e.at, e.mtime), last: e.last)
+                let state: ClaudeSession.State = waiting.contains(e.id) ? .waiting : e.phase == .working ? .working : e.phase == .compacting ? .compacting : done.contains(e.id) ? .done : .idle
+                return ClaudeSession(id: e.id, project: project.isEmpty || project == "/" ? "Claude" : project, source: e.source, state: state, at: max(e.at, e.mtime), last: e.last,
+                                     title: !e.aiTitle.isEmpty ? e.aiTitle : !e.firstSaid.isEmpty ? e.firstSaid : project.isEmpty || project == "/" ? "Claude" : project,
+                                     activity: e.phase == .working && !waiting.contains(e.id) ? e.activity : "")
             }
             .sorted { $0.at > $1.at }
             .prefix(Self.maxSessions).map { $0 }
@@ -147,6 +199,7 @@ public final class ClaudeSessions {
         let event = Self.text(body["hook_event_name"], max: 40)
         if event == "SessionEnd" {
             entries[id] = nil
+            done.remove(id)
             emit()
             return false
         }
@@ -160,12 +213,17 @@ public final class ClaudeSessions {
         // A manual /compact is a turn of its own and, as far as the docs say, ends with PostCompact and no Stop: idle then.
         // An auto compact happens mid turn, so the turn goes on.
         let ends = event == "Stop" || (event == "PostCompact" && body["trigger"] as? String == "manual")
+        if !ends { done.remove(id) }
         entry.phase = ends ? .idle : event == "PreCompact" ? .compacting : .working
         entry.at = now
+        entry.activity = event == "PreToolUse" ? ClaudeActivity.describe(tool: Self.text(body["tool_name"], max: 80), input: body["tool_input"] as? [String: Any] ?? [:]) : ""
         entries[id] = entry
         readSource(entry)
+        if entry.firstSaid.isEmpty, !entry.transcript.isEmpty { entry.firstSaid = ClaudeTranscript.firstSaid(entry.transcript) }
+        let finished = event == "Stop" && was == .working
+        if finished { done.insert(id) }
         emit()
-        return event == "Stop" && was == .working
+        return finished
     }
 
     /// CLI or VS Code, from the first lines of the transcript. Read once per session.
@@ -216,6 +274,8 @@ public final class ClaudeSessions {
                 if entry.mtime != entry.tailed {
                     entry.tailed = entry.mtime
                     entry.last = ClaudeTranscript.lastSaid(entry.transcript)
+                    entry.aiTitle = ClaudeTranscript.aiTitle(entry.transcript)
+                    if entry.firstSaid.isEmpty { entry.firstSaid = ClaudeTranscript.firstSaid(entry.transcript) }
                 }
                 // Only when the transcript changed, and not while Claude waits on a request: a quiet transcript means
                 // nothing (long builds write nothing for minutes).

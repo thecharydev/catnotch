@@ -91,7 +91,7 @@ final class NotchPanel {
 
     /// A request arriving or leaving opens or folds the Notch; Observation calls back once per change, so look again each time.
     private func watchRequests() {
-        withObservationTracking { _ = claude.requests.count } onChange: { [weak self] in
+        withObservationTracking { _ = claude.requests.count; _ = claude.finished?.id } onChange: { [weak self] in
             Task { @MainActor in self?.update(); self?.watchRequests() }
         }
     }
@@ -204,7 +204,7 @@ final class NotchPanel {
             leaveTimer?.cancel()
         }
         leaveExpired = false
-        let waiting = !claude.requests.isEmpty
+        let waiting = !claude.requests.isEmpty || claude.finished != nil
         // The request that opened it alone was answered (or gone): fold, not open the page under the pointer that clicked it.
         if !waiting && peeking && !pinned { suppressed = true }
         if suppressed { if inside { inside = false } else { suppressed = false } } // Esc: not again until the pointer has left

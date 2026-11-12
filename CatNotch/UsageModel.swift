@@ -36,11 +36,11 @@ final class UsageModel {
         }
     }
 
-    /// Checks now and every 2 minutes for as long as the view is showing (the caller's task is cancelled when it goes).
+    /// Checks now and every 30 s for as long as the view is showing (the caller's task is cancelled when it goes).
     func poll() async {
         while !Task.isCancelled {
             await refresh()
-            try? await Task.sleep(for: .seconds(120))
+            try? await Task.sleep(for: .seconds(30))
         }
     }
 

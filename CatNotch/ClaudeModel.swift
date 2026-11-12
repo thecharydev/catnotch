@@ -16,7 +16,11 @@ final class ClaudeModel {
     private(set) var enabled: Bool
     /// The sessions the Claude page shows: not the hidden ones. Empty while Claude Code is off.
     var sessions: [ClaudeSession] { ClaudeArchive.visible(all, archived: archived) }
-    /// The system sound for a request that needs you. Nil: silent.
+    /// The session that just finished, shown for about 1 second as "<title> finished". Nil: nothing to show.
+    private(set) var finished: (id: String, title: String)?
+    private var finishedTimer: Task<Void, Never>?
+    private var finishedHeld = false
+    /// The system sound for a finished session. Nil: silent.
     private(set) var sound: String?
     /// The first request is opened out: a permission's whole command, or a question's card. Hovering opens it;
     /// each new first request starts shut.
@@ -42,12 +46,15 @@ final class ClaudeModel {
         hooks.onChange = { [weak self] next in
             guard let self else { return }
             if next.first?.id != requests.first?.id { open = false; shut = false }
-            // A request that was not there before is one that needs you.
-            if let newest = next.last, next.count > requests.count, !requests.contains(where: { $0.id == newest.id }) { play(sound) }
             requests = next
         }
         hooks.sessions.onChange = { [weak self] list in self?.all = list }
-        hooks.onTurnEnd = { [weak self] in self?.play(self?.sound) }
+        hooks.onTurnEnd = { [weak self] id, title in
+            guard let self else { return }
+            finished = (id, title)
+            startFinishedTimer()
+            play(sound)
+        }
         // Lives as long as the app.
         _ = store.observe { [weak self] data in
             MainActor.assumeIsolated {
@@ -57,6 +64,25 @@ final class ClaudeModel {
             }
         }
     }
+
+    private func startFinishedTimer() {
+        finishedTimer?.cancel()
+        guard !finishedHeld else { return }
+        finishedTimer = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            self?.finished = nil
+        }
+    }
+
+    /// The pointer on the banner pauses its 1 second timer; letting go restarts it.
+    func holdFinished(_ on: Bool) {
+        finishedHeld = on
+        if on { finishedTimer?.cancel() } else if finished != nil { startFinishedTimer() }
+    }
+
+    /// The Claude page was looked at: "Done" rows go back to idle.
+    func markSeen() { hooks.sessions.markSeen() }
 
     /// Settings' sound picker; the pick plays once, so you hear it.
     func setSound(_ name: String?) {

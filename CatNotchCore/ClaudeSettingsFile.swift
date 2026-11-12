@@ -47,10 +47,10 @@ public enum ClaudeSettingsFile {
     /// Longer than the server's own 60 s, so its empty reply always arrives first.
     static let hookTimeout = 65
     /// Events that only report (for the Claude page), so they get an empty reply at once and a short timeout.
-    static let reporting = ["SessionEnd", "UserPromptSubmit", "Stop", "PreCompact", "PostCompact"]
+    static let reporting = ["SessionEnd", "UserPromptSubmit", "Stop", "PreCompact", "PostCompact", "PostToolUse", "PreToolUse"]
     static let reportTimeout = 5
     /// Events whose entries we write.
-    static let events = ["PermissionRequest", "PreToolUse"] + reporting
+    static let events = ["PermissionRequest"] + reporting
 
     enum Failure: Error { case invalid, write }
 
@@ -75,11 +75,14 @@ public enum ClaudeSettingsFile {
         }
 
         var hooks = root["hooks"] as? [String: Any] ?? [:]
-        var wanted: [String: [String: Any]] = add ? [
-            "PermissionRequest": ["hooks": [entry("permission", port: port, token: token)]],
-            "PreToolUse": ["matcher": "AskUserQuestion", "hooks": [entry("question", port: port, token: token)]],
+        var wanted: [String: [[String: Any]]] = add ? [
+            "PermissionRequest": [["hooks": [entry("permission", port: port, token: token)]]],
         ] : [:]
-        if add { for event in reporting { wanted[event] = ["hooks": [entry("event", port: port, token: token, timeout: reportTimeout)]] } }
+        if add {
+            for event in reporting { wanted[event] = [["hooks": [entry("event", port: port, token: token, timeout: reportTimeout)]]] }
+            // The question is held for an answer; every other tool call is only reported (spec 0042).
+            wanted["PreToolUse"] = [["matcher": "AskUserQuestion", "hooks": [entry("question", port: port, token: token)]]] + wanted["PreToolUse"]!
+        }
         for event in events {
             var kept: [Any] = []
             // Take our hooks out of every group; a group left empty by that goes too.
@@ -88,7 +91,7 @@ public enum ClaudeSettingsFile {
                 let rest = inside.filter { !isOurs($0) }
                 if !rest.isEmpty { group["hooks"] = rest; kept.append(group) }
             }
-            if let ours = wanted[event] { kept.append(ours) }
+            kept += wanted[event] ?? []
             hooks[event] = kept.isEmpty ? nil : kept
         }
         root["hooks"] = hooks.isEmpty ? nil : hooks

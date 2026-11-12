@@ -145,13 +145,13 @@ extension StoreData {
 /// Reads every provider's limits and remembers the last good reading of each.
 ///
 /// - A failed check shows the last good reading instead (an expired login does not: see spec 0025).
-/// - Checks closer than a minute reuse it outright, and a provider that answered "unavailable" is left alone for five
+/// - Checks closer than 15 s reuse it outright, and a provider that answered "unavailable" is left alone for five
 ///   minutes: the endpoints rate limit, and Claude Code polls the same one.
 /// - Readings are also kept in `cache`, so a relaunch shows numbers while the endpoint is rate limiting.
 public actor LimitsReader {
     public typealias Send = @Sendable (URLRequest) async throws -> (Data, Int)
 
-    static let minGap: TimeInterval = 60
+    static let minGap: TimeInterval = 15
     static let backoff: TimeInterval = 5 * 60
 
     private struct Entry: Codable { var at: Date; var limits: [Limit] }

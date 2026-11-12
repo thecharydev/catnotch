@@ -10,7 +10,7 @@ private let token = "test-token"
 /// One parent for every suite here: each binds loopback ports, and suites run in parallel unless nested under a serialized one.
 @MainActor @Suite(.serialized) enum ClaudeHookServer {}
 
-private let reportingEvents = ["SessionEnd", "UserPromptSubmit", "Stop", "PreCompact", "PostCompact"]
+private let reportingEvents = ["SessionEnd", "UserPromptSubmit", "Stop", "PreCompact", "PostCompact", "PostToolUse"]
 
 /// One test's world.
 @MainActor private final class Rig {
@@ -132,7 +132,7 @@ extension ClaudeHookServer {
         let root = rig.read()
         let found = ours(root)
         for event in ["PermissionRequest", "PreToolUse"] + reportingEvents { // the reporting ones too, including those an older version never had
-            #expect(found[event]?.count == 1)
+            #expect(found[event]?.count == (event == "PreToolUse" ? 2 : 1)) // the question, and the report of every tool call
             #expect((found[event]![0]["url"] as! String).hasPrefix("http://127.0.0.1:\(rig.port)/desknotch/"))
             #expect((found[event]![0]["headers"] as! [String: String])["Authorization"] == "Bearer \(token)")
         }
@@ -148,12 +148,14 @@ extension ClaudeHookServer {
         #expect(await rig.hooks.enable() == .ok)
         #expect(await rig.hooks.enable() == .ok)
         let found = ours(rig.read())
-        #expect(found["PermissionRequest"]?.count == 1 && found["PreToolUse"]?.count == 1)
+        #expect(found["PermissionRequest"]?.count == 1 && found["PreToolUse"]?.count == 2)
         #expect(route(found["PermissionRequest"]![0]) == "permission")
         #expect(route(found["PreToolUse"]![0]) == "question")
         #expect(found["PreToolUse"]![0]["matcher"] as? String == "AskUserQuestion")
         #expect(found["PermissionRequest"]![0]["timeout"] as? Int == 65)
         #expect(found["PreToolUse"]![0]["timeout"] as? Int == 65)
+        // Spec 0042: every tool call is reported too (for the row's activity), at once and with no matcher.
+        #expect(route(found["PreToolUse"]![1]) == "event" && found["PreToolUse"]![1]["matcher"] == nil && found["PreToolUse"]![1]["timeout"] as? Int == 5)
         for event in reportingEvents { // replied to at once, so a short timeout
             #expect(found[event]?.count == 1)
             #expect(route(found[event]![0]) == "event")
@@ -568,16 +570,52 @@ extension ClaudeHookServer {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try JSONSerialization.data(withJSONObject: ["sessionId": "abc", "pid": Int(getpid()), "cwd": "/work/proj"]).write(to: dir.appendingPathComponent("a.json"))
         await rig.launch()
-        var ended = 0
-        rig.hooks.onTurnEnd = { ended += 1 }
+        var ended: [String] = []
+        rig.hooks.onTurnEnd = { id, title in ended.append("\(id) \(title)") }
         for name in ["UserPromptSubmit", "Stop", "Stop"] { // the second Stop ends nothing
             let reply = await call(rig, "/desknotch/event", body: ["hook_event_name": name, "session_id": "abc", "cwd": "/work/proj"])
             #expect(reply.status == 200 && isEmpty(reply.json))
         }
-        #expect(ended == 1)
-        #expect(rig.hooks.sessions.list.map(\.project) == ["proj"] && rig.hooks.sessions.list.first?.state == .idle)
+        #expect(ended == ["abc proj"])
+        #expect(rig.hooks.sessions.list.map(\.project) == ["proj"] && rig.hooks.sessions.list.first?.state == .done)
+        rig.hooks.sessions.markSeen()
+        #expect(rig.hooks.sessions.list.first?.state == .idle)
         #expect(isEmpty(await call(rig, "/desknotch/event", body: ["hook_event_name": "SomethingElse", "session_id": "zzz"]).json)) // not ours: ignored
         #expect(rig.hooks.sessions.list.count == 1)
+    }
+
+    @Test func aFinishedTurnIsSilentWhenItsTerminalIsInFront() async throws {
+        let rig = try Rig(); defer { rig.finish() }
+        await rig.launch()
+        var ended = 0
+        rig.hooks.onTurnEnd = { _, _ in ended += 1 }
+        rig.inFront = true
+        for name in ["UserPromptSubmit", "Stop"] { _ = await call(rig, "/desknotch/event", body: ["hook_event_name": name, "session_id": "abc"]) }
+        #expect(ended == 0)
+        rig.inFront = false
+        for name in ["UserPromptSubmit", "Stop"] { _ = await call(rig, "/desknotch/event", body: ["hook_event_name": name, "session_id": "abc"]) }
+        #expect(ended == 1)
+    }
+
+    @Test func aFinishedToolDropsOnlyTheRequestItMatches() async throws {
+        let rig = try Rig(); defer { rig.finish() }
+        await rig.launch()
+        var q = question(); q["tool_use_id"] = "tu1"
+        async let sentQ = call(rig, "/desknotch/question", body: q)
+        _ = try #require(await rig.waitPending())
+        async let sentP = call(rig, "/desknotch/permission", body: permission())
+        for _ in 0..<300 where rig.hooks.requests.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        func done(_ session: String, _ tool: String, _ input: [String: Any], _ useId: String = "x") async {
+            _ = await call(rig, "/desknotch/event", body: ["hook_event_name": "PostToolUse", "session_id": session, "tool_name": tool, "tool_input": input, "tool_use_id": useId])
+        }
+        await done("s1", "Bash", ["command": "pwd"]); await done("s2", "Bash", ["command": "ls -la"]); await done("s1", "AskUserQuestion", [:], "other")
+        #expect(rig.hooks.requests.count == 2) // another input, another session, another tool_use_id: nothing dropped
+        await done("s1", "Bash", ["command": "ls -la"])
+        #expect(rig.hooks.requests.count == 1)
+        await done("s1", "AskUserQuestion", [:], "tu1")
+        #expect(rig.hooks.requests.isEmpty)
+        let (rq, rp) = await (sentQ, sentP)
+        #expect(isEmpty(rq.json) && isEmpty(rp.json))
     }
 
     @Test func aRequestWaitingMakesItsSessionWaitingUntilItIsAnswered() async throws {

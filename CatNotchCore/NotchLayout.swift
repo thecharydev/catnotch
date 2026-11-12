@@ -65,6 +65,8 @@ public enum NotchLayout {
     public static let claudePermission: CGFloat = 96
     public static let claudeCommandGrow: CGFloat = 82
     public static let claudeQuestion: CGFloat = 76
+    /// The "<project> finished" banner (spec 0040).
+    public static let claudeFinished: CGFloat = 44
     /// The question card hugs its content (a small question is a small card) up to this tall, then its text and options scroll.
     public static let claudeCardMax: CGFloat = 300
     public static let claudeCardText: CGFloat = 64
@@ -93,7 +95,7 @@ public enum NotchLayout {
     /// The Claude page (spec 0033): a heading and a row a session, up to six rows and then it scrolls; an empty list keeps one
     /// row's room for its sentence.
     public static let claudeHeading: CGFloat = 26
-    public static let claudeRow: CGFloat = 30
+    public static let claudeRow: CGFloat = 40 // two lines: the title, and the tool or your last message
     public static let claudeRowsMax = 6
     public static func claudeSessionsContent(count: Int) -> CGSize {
         let rows = CGFloat(max(1, min(count, claudeRowsMax)))

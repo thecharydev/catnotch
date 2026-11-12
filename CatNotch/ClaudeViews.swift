@@ -32,12 +32,45 @@ extension ClaudeRequest {
     }
 }
 
+/// "<title> finished": the closed Notch opens on it for about 1 second (spec 0040). The pointer on it pauses the timer.
+struct ClaudeFinishedBanner: View {
+    let title: String
+    let accent: Color
+    var claude: ClaudeModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(accent).accessibilityHidden(true)
+            Text("\(title) finished").font(.system(size: 12, weight: .semibold)).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: NotchLayout.claudeFinished)
+        .onHover { claude.holdFinished($0) }
+        .onDisappear { claude.holdFinished(false) }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A slow pulse on its own animation, so it is smooth between the 0.15 s ticks of the page clock.
+private struct PulsingDot: View {
+    let color: Color
+    let still: Bool
+    @State private var dim = false
+    var body: some View {
+        Circle().fill(color).frame(width: 7, height: 7).opacity(still || !dim ? 1 : 0.35)
+            .onAppear { if !still { withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { dim = true } } }
+    }
+}
+
 /// The Claude page: every live session and what it is doing (spec 0033, the Electron `ClaudeSessions`).
 struct ClaudeSessionsPage: View {
     var claude: ClaudeModel
     let accent: Color
 
     private static let badge: [ClaudeSource: String] = [.cli: "CLI", .vscode: "VS Code"]
+    private static let spinner = ["·", "✢", "✳", "∗", "✻", "✽"]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Only while the page is on screen does the clock run.
+    @State private var visible = false
 
     private func label(_ state: ClaudeSession.State) -> String {
         switch state {
@@ -45,6 +78,7 @@ struct ClaudeSessionsPage: View {
         case .compacting: "Compacting"
         case .idle: "Idle"
         case .waiting: "Needs your input"
+        case .done: "Done"
         }
     }
 
@@ -58,16 +92,40 @@ struct ClaudeSessionsPage: View {
         }
     }
 
-    private func row(_ s: ClaudeSession) -> some View {
+    /// The state as a glyph (spec 0042): one clock, `tick` counts 0.15 s steps, drives every looping one. Reduce Motion: still.
+    @ViewBuilder private func glyph(_ state: ClaudeSession.State, tick: Int) -> some View {
+        switch state {
+        case .working:
+            Text(reduceMotion ? "✻" : Self.spinner[tick % Self.spinner.count]).font(.system(size: 12, weight: .semibold)).foregroundStyle(accent)
+        case .compacting:
+            Circle().fill(accent).frame(width: reduceMotion ? 6 : [9, 6, 3, 6][tick % 4], height: reduceMotion ? 6 : [9, 6, 3, 6][tick % 4]) // a dot being squeezed
+        case .waiting:
+            PulsingDot(color: waitingColor, still: reduceMotion)
+        case .done:
+            Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundStyle(accent).transition(.scale.combined(with: .opacity))
+        case .idle:
+            Circle().fill(.white.opacity(0.3)).frame(width: 6, height: 6)
+        }
+    }
+
+    private func row(_ s: ClaudeSession, tick: Int) -> some View {
         HStack(spacing: 8) {
-            Circle().fill(s.state == .waiting ? waitingColor : s.state == .idle ? .white.opacity(0.3) : accent).frame(width: 6, height: 6).accessibilityHidden(true)
-            Text(s.project).font(.system(size: 11, weight: .semibold)).lineLimit(1).frame(maxWidth: 110, alignment: .leading).fixedSize(horizontal: true, vertical: false)
-            Text(s.last.isEmpty ? "" : "You: \(s.last)").font(.system(size: 10)).foregroundStyle(.white.opacity(0.45)).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+            glyph(s.state, tick: tick)
+                .frame(width: 14, height: 14).animation(reduceMotion ? nil : .spring(duration: 0.3), value: s.state)
+                .help(label(s.state)).accessibilityLabel(label(s.state))
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(s.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                    if s.project != s.title { Text(s.project).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).fixedSize() }
+                }
+                Text(s.activity.isEmpty ? (s.last.isEmpty ? "" : "You: \(s.last)") : s.activity)
+                    .font(.system(size: 10)).foregroundStyle(.white.opacity(s.activity.isEmpty ? 0.45 : 0.6)).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let badge = Self.badge[s.source] {
                 Text(badge).font(.system(size: 9, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
                     .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(.white.opacity(0.1)))
             }
-            Text(label(s.state)).font(.system(size: 10, weight: s.state == .waiting ? .semibold : .regular)).foregroundStyle(s.state == .waiting ? waitingColor : .white.opacity(0.5))
             button("arrow.up.forward.app", "Go to its window") { claude.focus(s.id) }
             button("xmark", "Hide until it has news") { claude.archive(s.id) }
         }
@@ -85,10 +143,16 @@ struct ClaudeSessionsPage: View {
             if sessions.isEmpty {
                 Text("No Claude sessions yet. Start one in a terminal or VS Code.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
             } else {
-                ScrollView { VStack(spacing: 0) { ForEach(sessions) { row($0) } } }.scrollIndicators(.never)
+                // One clock for every row, stopped when the page is not showing or motion is off.
+                TimelineView(.animation(minimumInterval: 0.15, paused: !visible || reduceMotion)) { timeline in
+                    let tick = Int(timeline.date.timeIntervalSinceReferenceDate / 0.15)
+                    ScrollView { VStack(spacing: 0) { ForEach(sessions) { row($0, tick: tick) } } }.scrollIndicators(.never)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear { visible = true }
+        .onDisappear { visible = false; claude.markSeen() } // "Done" stays until you have looked at the list
     }
 }
 

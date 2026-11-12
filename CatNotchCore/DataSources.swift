@@ -12,7 +12,7 @@ public struct DataSource: Equatable, Sendable {
         lines: [
             "Claude Code: the sign-in it keeps in your Keychain (item \"Claude Code-credentials\", macOS may ask once), else ~/.claude/.credentials.json.",
             "Codex: ~/.codex/auth.json.",
-            "Each token goes only to its own company (api.anthropic.com or chatgpt.com) to ask for your plan limits, about every 2 minutes while Home is open.",
+            "Each token goes only to its own company (api.anthropic.com or chatgpt.com) to ask for your plan limits, about every 30 seconds while Home is open.",
             "CatNotch never refreshes or keeps a token. It keeps only the last numbers, in limits-cache.json.",
         ])
 
