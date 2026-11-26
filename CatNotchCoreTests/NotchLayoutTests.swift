@@ -3,16 +3,10 @@ import Testing
 @testable import CatNotchCore
 
 @Test func homeIsAsWideAsItsTilesAndNeverUnder320() {
-    let wide = NotchLayout.homeContent(tiles: [236, 328, 192], glance: false)
+    let wide = NotchLayout.homeContent(tiles: [236, 328, 192])
     #expect(wide.width == 236 + 328 + 192 + 2 * NotchLayout.gap)
     #expect(wide.height == NotchLayout.tile)
-    #expect(NotchLayout.homeContent(tiles: [236], glance: false).width + 2 * NotchLayout.side == NotchLayout.homeMinWidth)
-}
-
-@Test func homeGrowsByTheGlanceRow() {
-    let plain = NotchLayout.homeContent(tiles: [236], glance: false)
-    let chips = NotchLayout.homeContent(tiles: [236], glance: true)
-    #expect(chips.height - plain.height == NotchLayout.gap + NotchLayout.glanceRow)
+    #expect(NotchLayout.homeContent(tiles: [236]).width + 2 * NotchLayout.side == NotchLayout.homeMinWidth)
 }
 
 @Test func openAddsPaddingAroundContent() {
@@ -26,7 +20,7 @@ import Testing
 }
 
 @Test func aRequestStripSitsAboveThePageAndWidensItToAtLeast420() {
-    let page = NotchLayout.homeContent(tiles: [236], glance: false)
+    let page = NotchLayout.homeContent(tiles: [236])
     let with = NotchLayout.withStrip(page, strip: NotchLayout.claudePermission)
     #expect(with.width == NotchLayout.claudeWidth)
     #expect(with.height == page.height + NotchLayout.gap + NotchLayout.claudePermission)
@@ -49,6 +43,6 @@ import Testing
 }
 
 @Test func homeGrowsByTheNextEventLine() {
-    let plain = NotchLayout.homeContent(tiles: [236], glance: false)
-    #expect(NotchLayout.homeContent(tiles: [236], glance: false, nextEvent: true).height - plain.height == NotchLayout.nextEventLine)
+    let plain = NotchLayout.homeContent(tiles: [236])
+    #expect(NotchLayout.homeContent(tiles: [236], nextEvent: true).height - plain.height == NotchLayout.nextEventLine)
 }
