@@ -83,6 +83,13 @@ extension Color {
 private struct NotchShape: Shape {
     var topCornerRadius: CGFloat
     var bottomCornerRadius: CGFloat
+    var closesTopEdge = true
+
+    var rimShape: Self {
+        var rim = self
+        rim.closesTopEdge = false
+        return rim
+    }
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { .init(topCornerRadius, bottomCornerRadius) }
@@ -100,7 +107,7 @@ private struct NotchShape: Shape {
         p.addQuadCurve(to: CGPoint(x: rect.maxX - t, y: rect.maxY - b), control: CGPoint(x: rect.maxX - t, y: rect.maxY))
         p.addLine(to: CGPoint(x: rect.maxX - t, y: rect.minY + t))
         p.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY), control: CGPoint(x: rect.maxX - t, y: rect.minY))
-        p.closeSubpath()
+        if closesTopEdge { p.closeSubpath() }
         return p
     }
 }
@@ -125,10 +132,11 @@ private struct NotchFill<S: Shape>: View {
     let style: NotchStyle
     let flavor: Flavor
     let shape: S
+    var rimShape: S? = nil
     @Environment(\.notchTint) private var tint
 
     var body: some View {
-        fill.overlay { if let rim = tint.rim { shape.stroke(Color(hex: rim).opacity(0.5), lineWidth: 1) } }
+        fill.overlay { if let rim = tint.rim { (rimShape ?? shape).stroke(Color(hex: rim).opacity(0.5), lineWidth: 1) } }
     }
 
     @ViewBuilder private var fill: some View {
@@ -658,7 +666,7 @@ struct NotchView: View {
         let spring = model.isOpen ? notchOpenSpring : notchCloseSpring
         VStack(spacing: 4) {
         ZStack(alignment: .top) {
-            NotchFill(style: model.style, flavor: model.flavor, shape: shape)
+            NotchFill(style: model.style, flavor: model.flavor, shape: shape, rimShape: shape.rimShape)
             // The hardware cutout stays black in every style, so the Notch still grows out of it.
             // Its bottom corners are curved like the real notch's, or a square block would poke out of them.
             if model.cutout > 0 {
