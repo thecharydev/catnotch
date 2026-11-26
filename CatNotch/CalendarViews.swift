@@ -182,7 +182,7 @@ private struct MonthGrid: View {
                 Text(month.formatted(.dateTime.month(.wide))).font(.system(size: 12, weight: .semibold))
                     + Text(" " + month.formatted(.dateTime.year(.defaultDigits))).font(.system(size: 12)).foregroundColor(.white.opacity(0.5))
                 Spacer(minLength: 0)
-                if !atNow || selected != nil {
+                if !atNow || (selected.map { !cal.isDate($0, inSameDayAs: now) } ?? false) { // not when today itself is the chosen day
                     Button { month = firstOfMonth(now); selected = nil } label: {
                         Text("TODAY").font(.system(size: 9, weight: .bold)).foregroundStyle(.black).padding(.horizontal, 6).background(Capsule().fill(accent))
                     }
