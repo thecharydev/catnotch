@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 import CatNotchCore
 
 /// The AI usage limits for every display's Notch. One reader and one answer, shared; the logins are only read after the
@@ -11,7 +12,11 @@ final class UsageModel {
     private var data: StoreData
     private let store: CatNotchStore
     private let reader: LimitsReader
-    private var refreshing = false
+    /// True while a check is running, whoever asked (the Notch opening, the poll, a reload), so the reload arrow can turn.
+    private(set) var refreshing = false
+    /// A reload asked for while a check was running: runs once that one is done instead of being dropped.
+    private var reloadQueued = false
+    private let log = Logger(subsystem: "com.thecharydev.catnotch", category: "usage")
 
     init(store: CatNotchStore) {
         self.store = store
@@ -26,7 +31,21 @@ final class UsageModel {
     }
 
     /// Whether the AI usage view is on (Settings, or a "Not now" to the question, turns it off).
-    var available: Bool { data.showAiUsage }
+    var available: Bool { data.showAiUsage && !data.enabledProviders.isEmpty }
+
+    /// "Claude or Codex", for the "no sign-in" card.
+    var enabledNames: String { data.enabledProviders.map(\.name).joined(separator: " or ") }
+
+    /// The master switch alone (Settings shows the provider toggles while it is on).
+    var masterOn: Bool { data.showAiUsage }
+
+    func isEnabled(_ provider: LimitsProvider) -> Bool { data.isEnabled(provider) }
+
+    func setEnabled(_ provider: LimitsProvider, _ on: Bool) {
+        store.update { $0.setEnabled(provider, on) }
+        prune()
+        Task { await refresh() }
+    }
 
     /// Switching it back on after "Not now" asks the question again.
     func setAvailable(_ on: Bool) {
@@ -36,21 +55,45 @@ final class UsageModel {
         }
     }
 
-    /// Checks now and every 30 s for as long as the view is showing (the caller's task is cancelled when it goes).
+    /// Checks now and every 30 s for as long as the view is showing (the caller's task is cancelled when it goes),
+    /// and right after the soonest window resets, so the old percent does not outlive its window.
     func poll() async {
         while !Task.isCancelled {
             await refresh()
-            try? await Task.sleep(for: .seconds(30))
+            let now = Date()
+            let reset = providers?.compactMap { $0.nextReset(after: now) }.min()
+            let wait = reset.map { min(30, max(5, $0.timeIntervalSince(now) + 1)) } ?? 30
+            try? await Task.sleep(for: .seconds(wait))
         }
     }
 
-    /// `force` (a retry) skips the reader's back-off.
+    /// `force` (a reload or a retry) skips the reader's gap and back-off, and waits its turn behind a check already running.
     func refresh(force: Bool = false) async {
-        guard available, !refreshing else { return }
-        guard data.aiConsent == true else { return }
+        guard available, data.aiConsent == true else { return }
+        if refreshing {
+            if force { reloadQueued = true }
+            return
+        }
         refreshing = true
         defer { refreshing = false }
-        providers = await reader.read(force: force)
+        var force = force
+        repeat {
+            reloadQueued = false
+            providers = await reader.read(force: force, providers: data.enabledProviders)
+            prune() // a toggle flipped while the read was running
+            #if DEBUG
+            for p in providers ?? [] { // what the tile is really showing, to tell a slow endpoint from a stale reading (spec 0046)
+                log.debug("\(p.name, privacy: .public): \(String(describing: p.reading), privacy: .public), \(p.at.map { Int(Date().timeIntervalSince($0)) } ?? -1)s old, force \(force)")
+            }
+            #endif
+            force = true
+        } while reloadQueued
+    }
+
+    /// An off provider drops out of the readings at once, even while both are off and no read runs.
+    private func prune() {
+        let on = Set(store.data.enabledProviders.map(\.name))
+        providers = providers?.filter { on.contains($0.name) }
     }
 
     /// True until the user has answered the question on the view; nothing is read before then.

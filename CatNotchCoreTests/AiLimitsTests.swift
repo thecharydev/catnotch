@@ -104,6 +104,16 @@ func aLoginWithoutATokenIsNotSignedIn(body: String) {
     #expect(data.settings["aiConsent"] == nil) // asked again, not "false"
 }
 
+@Test func usageProvidersDefaultOnAndSwitchIndependently() {
+    var data = StoreData()
+    #expect(LimitsProvider.allCases.allSatisfy { data.isEnabled($0) })
+    data.setEnabled(.codex, false)
+    #expect(data.isEnabled(.claude) && !data.isEnabled(.codex))
+    #expect(data.enabledProviders == [.claude])
+    data.setEnabled(.claude, false)
+    #expect(data.enabledProviders.isEmpty)
+}
+
 // MARK: the reader
 
 private final class Clock: @unchecked Sendable {
@@ -200,10 +210,19 @@ func aFailedCheckWithNothingBeforeIsUnavailable(reply: Result<(Data, Int), URLEr
     _ = await reader.read()
     clock.advance(14)
     _ = await reader.read()
-    _ = await reader.read(force: true) // even a retry: the reading is that fresh
     #expect(await server.calls[claudeHost] == 1)
     clock.advance(2)
     _ = await reader.read()
+    #expect(await server.calls[claudeHost] == 2)
+}
+
+@Test func aReloadChecksEvenInsideTheGap() async { // spec 0046 AC-4
+    let server = Server(), clock = Clock()
+    await server.say(claudeHost, ok(claudeBody))
+    let reader = makeReader(server, clock, signedIn: [.claude])
+    _ = await reader.read()
+    clock.advance(5)
+    _ = await reader.read(force: true)
     #expect(await server.calls[claudeHost] == 2)
 }
 
@@ -235,4 +254,66 @@ func aFailedCheckWithNothingBeforeIsUnavailable(reply: Result<(Data, Int), URLEr
     let second = Server() // after a relaunch the endpoint is rate limiting
     await second.say(claudeHost, status(429))
     #expect(claudeOnly(await makeReader(second, clock, cache: cache, signedIn: [.claude]).read()) == good)
+}
+
+private final class Asked: @unchecked Sendable { var names: [String] = [] }
+
+@Test func aSwitchedOffProviderIsNeitherReadNorAsked() async {
+    let server = Server(), asked = Asked()
+    await server.say(claudeHost, ok(claudeBody))
+    await server.say(codexHost, ok(codexPlusBody))
+    let reader = LimitsReader(cache: nil, credentials: { asked.names.append($0.name); return Credentials(token: "t") }, send: { try await server.handle($0) })
+    let readings = await reader.read(providers: [.claude])
+    #expect(readings.map(\.name) == ["Claude"])
+    #expect(asked.names == ["Claude"]) // Codex's login was never read
+    #expect(await server.calls[codexHost] == nil)
+    #expect(await reader.read(providers: []).isEmpty)
+}
+
+// MARK: freshness (spec 0046)
+
+@Test func aReadingKeepsTheTimeItWasTaken() async {
+    let server = Server(), clock = Clock()
+    await server.say(claudeHost, ok(claudeBody), status(429))
+    let reader = makeReader(server, clock, signedIn: [.claude])
+    let taken = clock.date
+    #expect(await reader.read().first?.at == taken)
+    clock.advance(300)
+    #expect(await reader.read().first?.at == taken) // the 429 shows the earlier numbers with their earlier time
+}
+
+@Test func theNextResetIsTheEarliestOneStillToCome() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    let limits = [Limit(label: "SESSION", used: 1, resetsAt: now.addingTimeInterval(-5)),
+                  Limit(label: "WEEK", used: 1, resetsAt: now.addingTimeInterval(900)),
+                  Limit(label: "MONTH", used: 1, resetsAt: now.addingTimeInterval(300))]
+    let provider = ProviderLimits(name: "Claude", reading: .limits(limits), at: now)
+    #expect(provider.nextReset(after: now) == now.addingTimeInterval(300))
+    #expect(ProviderLimits(name: "Claude", reading: .failed(.unavailable)).nextReset(after: now) == nil)
+}
+
+@Test func aStaleOrbSaysHowOldItIsOrThatItIsUpdating() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    let reset = Limit(label: "SESSION", used: 40, resetsAt: now.addingTimeInterval(-1))
+    let later = Limit(label: "WEEK", used: 40, resetsAt: now.addingTimeInterval(3600))
+    func provider(age: TimeInterval) -> ProviderLimits { ProviderLimits(name: "Claude", reading: .limits([reset, later]), at: now.addingTimeInterval(-age)) }
+    #expect(provider(age: 10).note(for: reset, now: now) == "updating…")
+    #expect(provider(age: 10).note(for: later, now: now) == nil) // fresh, and its own window has not reset
+    #expect(provider(age: 360).note(for: later, now: now) == "updated 6m ago")
+    #expect(provider(age: 7300).note(for: later, now: now) == "updated 2h ago")
+}
+
+@Test func aWindowThatHasResetIsCheckedAgainInsideTheGap() async { // spec 0046 AC-3: the early wake must not be a no-op
+    let server = Server(), clock = Clock()
+    let reset = clock.date.addingTimeInterval(10)
+    let body = Data(#"{"five_hour":{"utilization":50,"resets_at":"\#(ISO8601DateFormatter().string(from: reset))"}}"#.utf8)
+    await server.say(claudeHost, ok(body))
+    let reader = makeReader(server, clock, signedIn: [.claude])
+    _ = await reader.read()
+    clock.advance(5)
+    _ = await reader.read() // before the reset: the gap holds
+    #expect(await server.calls[claudeHost] == 1)
+    clock.advance(6) // 11 s in: the window has reset, yet the reading is younger than the 15 s gap
+    _ = await reader.read()
+    #expect(await server.calls[claudeHost] == 2)
 }

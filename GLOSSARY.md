@@ -12,6 +12,26 @@ _Avoid_: cross-platform, Windows support, Intel support
 The bar at the top of the screen, closed by default and opened by hovering it.
 _Avoid_: island, pill, bar (alone)
 
+**Codex approval request**:
+A request from Codex for the user to approve or decline a proposed command or file change.
+_Avoid_: Codex permission prompt
+
+**Usage provider**:
+An AI tool whose usage limits the Notch can show on Home (Claude or Codex). Each one can be switched on or off on its own.
+_Avoid_: app, source, service
+
+**Reading**:
+The usage limits a Usage provider last reported, with the time it was taken.
+_Avoid_: snapshot, data, status
+
+**Stale reading**:
+A Reading that is shown but no longer trusted: older than about 2 minutes, or for a window whose reset time has passed. It is dimmed and shows its age.
+_Avoid_: cached value, old data
+
+**Reload**:
+The user's own request, from the AI usage tile, to take a fresh Reading now, past the usual minimum gap and back-off.
+_Avoid_: retry (that is the failed card's own button), sync
+
 **Release**:
 A version tag on `thecharydev/catnotch` that publishes the native Apple silicon build as a dmg and an update zip.
 _Avoid_: Windows release, Store release

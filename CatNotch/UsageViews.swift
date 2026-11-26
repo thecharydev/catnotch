@@ -74,6 +74,8 @@ private func detail(_ name: String, _ limit: Limit) -> String {
 private struct Gauge: View {
     let name: String
     let limit: Limit
+    /// Set while the numbers are old or their window has reset (spec 0046): the orb is dimmed and this replaces the name.
+    var note: String?
     /// 1 is the Electron Notch's size (a 64pt orb in a 72pt column); less only when the row is short of room.
     let scale: CGFloat
     @State private var on = false
@@ -87,12 +89,14 @@ private struct Gauge: View {
             Orb(fraction: limit.used / 100, tint: color)
                 .frame(width: size, height: size)
                 .scaleEffect(on ? 1.04 : 1)
+                .opacity(note == nil ? 1 : 0.4)
             HStack(alignment: .firstTextBaseline, spacing: 0) { // the percent under the orb, its unit small beside it
                 Text("\(used)").font(.system(size: 17 * max(scale, 0.8), weight: .semibold).monospacedDigit()).tracking(-0.5)
                 Text("%").font(.system(size: 10 * max(scale, 0.8), weight: .medium)).opacity(0.4)
             }
             .foregroundStyle(color.color)
-            Text(on ? hint : "\(name) \(limit.short.lowercased())")
+            .opacity(note == nil ? 1 : 0.5)
+            Text(on ? hint : note ?? "\(name) \(limit.short.lowercased())")
                 .font(.system(size: 10, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(on ? 0.8 : 0.45))
                 .lineLimit(1).minimumScaleFactor(0.7).frame(width: column)
         }
@@ -101,7 +105,7 @@ private struct Gauge: View {
         .background(PointerOver { on = $0 })
         .animation(.easeOut(duration: 0.15), value: on)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(detail(name, limit)), \(used) percent used")
+        .accessibilityLabel("\(detail(name, limit)), \(used) percent used" + (note.map { ", \($0)" } ?? ""))
     }
 }
 
@@ -138,6 +142,80 @@ private struct RetryGauge: View {
         }
         .buttonStyle(.lively)
         .accessibilityLabel("\(name): \(error == .expired ? "sign in again" : "could not be read"). Check again")
+    }
+}
+
+/// Takes a fresh reading now, past the usual gap and back-off. One object throughout: the refresh icon folds its arrowhead
+/// into the path while it speeds up into a spinning ring, runs as long as a check really is running (a tap, the Notch
+/// opening, the poll), then slows, closes the arc and unfolds the arrowhead exactly as it was. The numbers come from
+/// `ReloadMotion`; this only draws them. With Reduce Motion it stays still and dims while checking.
+private struct ReloadButton: View {
+    var usage: UsageModel
+    @State private var tapping = false
+    @State private var motion: ReloadMotion?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var loading: Bool { tapping || usage.refreshing }
+
+    var body: some View {
+        Button {
+            guard !tapping, motion == nil else { return } // a tap during a check or while it settles does nothing more
+            tapping = true
+            Task {
+                await usage.refresh(force: true)
+                try? await Task.sleep(for: .milliseconds(350)) // an instant answer still shows the whole morph
+                tapping = false
+            }
+        } label: {
+            TimelineView(.animation(paused: motion == nil)) { timeline in
+                let frame = motion?.frame(at: timeline.date.timeIntervalSinceReferenceDate) ?? ReloadMotion.rest
+                Canvas { context, size in
+                    context.stroke(Self.icon(frame, size: size), with: .color(.white.opacity(0.55)),
+                                   style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+                }
+            }
+            .frame(width: 18, height: 18)
+            .opacity(reduceMotion && loading ? 0.4 : 1)
+            .frame(width: 22, height: 22).contentShape(Circle())
+        }
+        .buttonStyle(.lively)
+        .onChange(of: loading, initial: true) { _, on in
+            guard !reduceMotion else { return }
+            let now = Date.timeIntervalSinceReferenceDate
+            if on {
+                if motion?.settledAt != nil || motion == nil { motion = ReloadMotion(start: now) }
+            } else if var running = motion, running.settledAt == nil {
+                running.finish(at: now)
+                motion = running
+                let start = running.start, settled = running.settledAt ?? now
+                Task { // paused again once it is back at rest
+                    try? await Task.sleep(for: .seconds(max(0, settled - Date.timeIntervalSinceReferenceDate) + 0.05))
+                    if motion?.start == start { motion = nil }
+                }
+            }
+        }
+        .help("Check AI usage now")
+        .accessibilityLabel("Reload AI usage")
+    }
+
+    /// The arc from its tail to its head, and two wings at the head that fold back into the path as `head` goes to 0.
+    private static func icon(_ frame: ReloadMotion.Frame, size: CGSize) -> Path {
+        let center = CGPoint(x: size.width / 2, y: size.height / 2), radius = 4.3
+        func point(_ degrees: Double) -> CGPoint { CGPoint(x: center.x + radius * cos(degrees * .pi / 180), y: center.y + radius * sin(degrees * .pi / 180)) }
+        let head = ReloadMotion.iconHead + frame.rotation
+        var path = Path()
+        path.move(to: point(head - frame.sweep))
+        for degrees in stride(from: head - frame.sweep + 3, to: head, by: 3) { path.addLine(to: point(degrees)) }
+        path.addLine(to: point(head))
+        guard frame.head > 0.001 else { return path }
+        let tip = point(head), along = (head + 90) * .pi / 180 // clockwise along the path at the tip
+        let length = 3.0 * frame.head, spread = 42 * frame.head * .pi / 180
+        for side in [-1.0, 1.0] {
+            let back = along + .pi + side * spread
+            path.move(to: CGPoint(x: tip.x + length * cos(back), y: tip.y + length * sin(back)))
+            path.addLine(to: tip)
+        }
+        return path
     }
 }
 
@@ -195,22 +273,28 @@ struct UsageTile: View {
             let columns = { (p: ProviderLimits) -> CGFloat in if case .limits(let l) = p.reading { CGFloat(l.count) } else { 1 } }
             let natural = providers.map { 24 + 72 * columns($0) }
             let scale = min(1, (room - gap * CGFloat(providers.count - 1)) / natural.reduce(0, +))
-            HStack(spacing: gap) {
-                ForEach(Array(providers.enumerated()), id: \.element.id) { index, provider in
-                    HStack(spacing: 0) {
-                        switch provider.reading {
-                        case .limits(let limits): ForEach(limits, id: \.label) { Gauge(name: provider.name, limit: $0, scale: scale) }
-                        case .failed(let error): RetryGauge(name: provider.name, error: error, usage: usage)
+            TimelineView(.periodic(from: .now, by: 15)) { clock in // nothing else redraws the tile as readings age
+                HStack(spacing: gap) {
+                    ForEach(Array(providers.enumerated()), id: \.element.id) { index, provider in
+                        HStack(spacing: 0) {
+                            switch provider.reading {
+                            case .limits(let limits):
+                                ForEach(limits, id: \.label) { Gauge(name: provider.name, limit: $0, note: provider.note(for: $0, now: clock.date), scale: scale) }
+                            case .failed(let error): RetryGauge(name: provider.name, error: error, usage: usage)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .homeTile(width: natural[index] * scale)
+                        .overlay(alignment: .topTrailing) { // every card reloads (the same check for both tools); a failed one has its own retry
+                            if case .limits = provider.reading { ReloadButton(usage: usage).padding(4) }
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .homeTile(width: natural[index] * scale)
                 }
             }
         } else {
             VStack(spacing: 8) {
                 if usage.providers == nil { ProgressView().controlSize(.small).colorScheme(.dark) }
-                Text(usage.providers == nil ? "Checking…" : "No Claude Code or Codex sign-in found on this Mac.")
+                Text(usage.providers == nil ? "Checking…" : "No \(usage.enabledNames) sign-in found on this Mac.")
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)).multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
