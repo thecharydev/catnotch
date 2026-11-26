@@ -338,7 +338,7 @@ private struct SettingsView: View {
             Toggle("Show usage on Home", isOn: Binding(get: { usage.masterOn }, set: { usage.setAvailable($0) }))
             if usage.masterOn {
                 ForEach(LimitsProvider.allCases, id: \.self) { provider in
-                    Toggle(provider.name, isOn: Binding(get: { usage.isEnabled(provider) }, set: { usage.setEnabled(provider, $0) }))
+                    Toggle(provider.name, isOn: Binding(get: { usage.shows(provider) }, set: { usage.setShows(provider, $0) }))
                 }
             }
             SourceNote(source: .aiUsage)
