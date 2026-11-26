@@ -1,23 +1,6 @@
 import SwiftUI
 import CatNotchCore
 
-private let micColor = Color(red: 1, green: 0.62, blue: 0.04)
-private let cameraColor = Color(red: 0.19, green: 0.82, blue: 0.35)
-
-/// The dots the closed Notch shows while the microphone or camera is in use, as macOS does in the menu bar.
-struct PrivacyDots: View {
-    var system: SystemModel
-
-    var body: some View {
-        HStack(spacing: 8) {
-            if system.micInUse { Circle().fill(micColor).frame(width: 6, height: 6) }
-            if system.cameraInUse { Circle().fill(cameraColor).frame(width: 6, height: 6) }
-        }
-        .accessibilityElement()
-        .accessibilityLabel([system.micInUse ? "Microphone in use" : nil, system.cameraInUse ? "Camera in use" : nil].compactMap { $0 }.joined(separator: ", "))
-    }
-}
-
 /// What the closed Notch says for a moment when headphones connect, in the clock's place.
 struct ClosedHeadphones: View {
     let name: String
@@ -31,44 +14,6 @@ struct ClosedHeadphones: View {
         .padding(.horizontal, 6)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(name) connected")
-    }
-}
-
-/// One small pill: a symbol and a line of text.
-private struct Chip<Icon: View>: View {
-    @ViewBuilder var icon: Icon
-    let text: String
-    var tint = Color.white.opacity(0.75)
-
-    var body: some View {
-        HStack(spacing: 5) {
-            icon.font(.system(size: 12)).foregroundStyle(tint)
-            Text(text).font(.system(size: 11.5, weight: .medium).monospacedDigit()).lineLimit(1).truncationMode(.tail).frame(maxWidth: 150, alignment: .leading).fixedSize().foregroundStyle(.white.opacity(0.85))
-        }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(Capsule().fill(.white.opacity(0.09)))
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// The Home view's strip under the cards: Bluetooth devices and mic and camera in use.
-/// A tile whose capability is missing is simply not there.
-struct GlanceRow: View {
-    var system: SystemModel
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(system.bluetooth.prefix(2)) { device in
-                Chip(icon: { Image(systemName: Headphones.isWorn(device.name) ? "headphones" : "dot.radiowaves.right") },
-                     text: device.battery.map { "\(device.name) \($0)%" } ?? device.name)
-            }
-            if system.micInUse { Chip(icon: { Image(systemName: "mic.fill") }, text: "Microphone", tint: micColor) }
-            if system.cameraInUse { Chip(icon: { Image(systemName: "video.fill") }, text: "Camera", tint: cameraColor) }
-        }
-        .frame(height: 30)
-        .task { // the Notch opening is the moment to look again; each call skips itself when it has looked recently
-            system.refreshBluetooth()
-        }
     }
 }
 
@@ -94,6 +39,8 @@ private func span(_ minutes: Int) -> String { minutes >= 60 ? "\(minutes / 60)h 
 /// (or the moon) riding it. Redraws on the minute.
 struct ClockMode: View {
     var expanded: Bool
+    /// A connected Bluetooth device that reports its battery, as one quiet line at the foot of the clock.
+    var device: BluetoothDevice?
     @Environment(\.companionAccent) private var accent
     private static let sunrise = 6 * 60, sunset = 18 * 60
     private static let height: CGFloat = 44
@@ -105,7 +52,7 @@ struct ClockMode: View {
             let minute = Calendar.current.component(.hour, from: now) * 60 + Calendar.current.component(.minute, from: now)
             let up = minute >= Self.sunrise && minute < Self.sunset
             let note = up ? "\(span(Self.sunset - minute)) of daylight left" : "Sunrise in \(span((Self.sunrise - minute + 1440) % 1440))"
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 10) {
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(clock.time).font(.system(size: 28, weight: .semibold).monospacedDigit()).tracking(-1.2)
@@ -125,6 +72,10 @@ struct ClockMode: View {
                     Text(now.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))).font(.system(size: 11, weight: .semibold))
                     Label(up ? "\(span(Self.sunset - minute)) left" : "Up in \(span((Self.sunrise - minute + 1440) % 1440))", systemImage: up ? "sun.max.fill" : "moon.fill")
                         .font(.system(size: 10.5, weight: .medium)).foregroundStyle(up ? accent : .white.opacity(0.7)).labelStyle(.titleAndIcon)
+                }
+                if let device, let battery = device.battery {
+                    Label("\(device.name) \(battery)%", systemImage: Headphones.isWorn(device.name) ? "headphones" : "dot.radiowaves.right")
+                        .font(.system(size: 10.5, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(0.6)).lineLimit(1).labelStyle(.titleAndIcon)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

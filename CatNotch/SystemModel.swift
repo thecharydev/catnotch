@@ -1,7 +1,6 @@
 import AppKit
 import CoreAudio
 import CoreLocation
-import CoreMediaIO
 import CoreWLAN
 import IOKit.ps
 import Observation
@@ -22,7 +21,7 @@ struct AppEntry: Identifiable {
     var id: String { path }
 }
 
-/// The Mac's state at a glance, for the Notch on every display: battery, Wi-Fi, Bluetooth, microphone and camera,
+/// The Mac's state at a glance, for the Notch on every display: battery, Wi-Fi, Bluetooth,
 /// headphones arriving, and the apps used most. Everything is a system notification (no timers), and a capability the
 /// Mac lacks or the user has not allowed leaves only its own value empty.
 @MainActor @Observable
@@ -30,8 +29,6 @@ final class SystemModel {
     private(set) var battery = BatteryState.none
     private(set) var wifi: WifiState?
     private(set) var bluetooth: [BluetoothDevice] = []
-    private(set) var micInUse = false
-    private(set) var cameraInUse = false
     /// The name of headphones that just connected, for a moment, then nil again.
     private(set) var headphones: String?
     private(set) var apps: [AppEntry] = []
@@ -39,8 +36,6 @@ final class SystemModel {
     private let location = LocationGate()
     private let wifiWatcher = WifiWatcher()
     private var outputs: [UInt32: String]?
-    private var watchedAudio = Set<UInt32>()
-    private var watchedCamera = Set<UInt32>()
     private var headphonesHide: Task<Void, Never>?
     private var appsLoaded: Date?
     private var bluetoothAsked: Date?
@@ -51,7 +46,6 @@ final class SystemModel {
     init() {
         watchBattery()
         watchAudio()
-        watchCamera()
         watchWifi()
         refreshBattery()
         refreshWifi()
@@ -76,7 +70,7 @@ final class SystemModel {
         }
     }
 
-    // MARK: microphone, camera and audio outputs
+    // MARK: audio outputs
 
     private func watchAudio() {
         listen(AudioObjectID(kAudioObjectSystemObject), kAudioHardwarePropertyDevices) { [weak self] in self?.audioDevicesChanged() }
@@ -85,10 +79,6 @@ final class SystemModel {
 
     private func audioDevicesChanged() {
         let ids = Self.audioIDs(AudioObjectID(kAudioObjectSystemObject), kAudioHardwarePropertyDevices)
-        for id in ids where Self.hasStreams(id, scope: kAudioDevicePropertyScopeInput) && watchedAudio.insert(id).inserted {
-            listen(id, kAudioDevicePropertyDeviceIsRunningSomewhere) { [weak self] in self?.refreshMic() }
-        }
-        refreshMic()
 
         // What is already connected when the app starts is not news.
         let now = Dictionary(uniqueKeysWithValues: ids.filter { Self.hasStreams($0, scope: kAudioDevicePropertyScopeOutput) }.compactMap { id in Self.name(id).map { (id, $0) } })
@@ -110,36 +100,6 @@ final class SystemModel {
             try? await Task.sleep(for: .milliseconds(1400))
             if !Task.isCancelled { headphones = nil }
         }
-    }
-
-    private func refreshMic() {
-        let on = Self.audioIDs(AudioObjectID(kAudioObjectSystemObject), kAudioHardwarePropertyDevices).contains {
-            Self.hasStreams($0, scope: kAudioDevicePropertyScopeInput) && Self.running($0)
-        }
-        if on != micInUse { micInUse = on }
-    }
-
-    private func watchCamera() {
-        listenCamera(CMIOObjectID(kCMIOObjectSystemObject), kCMIOHardwarePropertyDevices) { [weak self] in self?.cameraDevicesChanged() }
-        cameraDevicesChanged()
-    }
-
-    private func cameraDevicesChanged() {
-        let ids = Self.cameraIDs()
-        for id in ids where watchedCamera.insert(id).inserted {
-            listenCamera(id, kCMIODevicePropertyDeviceIsRunningSomewhere) { [weak self] in self?.refreshCamera() }
-        }
-        refreshCamera()
-    }
-
-    private func refreshCamera() {
-        let on = Self.cameraIDs().contains { id in
-            var address = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceIsRunningSomewhere), mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal), mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
-            var running: UInt32 = 0
-            var used: UInt32 = 0
-            return CMIOObjectGetPropertyData(id, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &used, &running) == 0 && running != 0
-        }
-        if on != cameraInUse { cameraInUse = on }
     }
 
     // MARK: Wi-Fi
@@ -233,11 +193,6 @@ final class SystemModel {
         AudioObjectAddPropertyListenerBlock(object, &address, .main) { _, _ in MainActor.assumeIsolated { change() } }
     }
 
-    private func listenCamera(_ object: CMIOObjectID, _ selector: Int, _ change: @escaping @MainActor () -> Void) {
-        var address = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(selector), mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal), mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
-        CMIOObjectAddPropertyListenerBlock(object, &address, .main) { _, _ in MainActor.assumeIsolated { change() } }
-    }
-
     nonisolated private static func audioIDs(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) -> [UInt32] {
         var address = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var size: UInt32 = 0
@@ -257,30 +212,12 @@ final class SystemModel {
         return UnsafeMutableAudioBufferListPointer(raw.assumingMemoryBound(to: AudioBufferList.self)).contains { $0.mNumberChannels > 0 }
     }
 
-    /// CoreAudio keeps one flag per device, for any process. A headset that is also playing audio counts too.
-    nonisolated private static func running(_ id: UInt32) -> Bool {
-        var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        var value: UInt32 = 0
-        var size = UInt32(MemoryLayout<UInt32>.size)
-        return AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == 0 && value != 0
-    }
-
     nonisolated private static func name(_ id: UInt32) -> String? {
         var address = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var name: Unmanaged<CFString>?
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         guard AudioObjectGetPropertyData(id, &address, 0, nil, &size, &name) == 0 else { return nil }
         return name?.takeRetainedValue() as String?
-    }
-
-    nonisolated private static func cameraIDs() -> [CMIOObjectID] {
-        var address = CMIOObjectPropertyAddress(mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices), mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal), mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
-        var size: UInt32 = 0
-        guard CMIOObjectGetPropertyDataSize(CMIOObjectID(kCMIOObjectSystemObject), &address, 0, nil, &size) == 0, size > 0 else { return [] }
-        var ids = [CMIOObjectID](repeating: 0, count: Int(size) / MemoryLayout<CMIOObjectID>.size)
-        var used: UInt32 = 0
-        guard CMIOObjectGetPropertyData(CMIOObjectID(kCMIOObjectSystemObject), &address, 0, nil, size, &used, &ids) == 0 else { return [] }
-        return ids
     }
 }
 

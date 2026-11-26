@@ -33,6 +33,7 @@ final class NotchModel {
     var pagesOff = Set<NotchPage>()
     var showAvatar = true
     var showMusic = true
+    var showBluetooth = true
     /// How wide each side of the closed Notch is on a hardware notch; follows what the closed Notch shows.
     var wing = NotchSize.wing
     var closedCompanion = true
@@ -625,14 +626,14 @@ struct NotchView: View {
     }
 
     /// What the open Notch holds on the current page, sized as the Electron Notch sizes it.
-    private func pageContent(glance: Bool) -> CGSize {
+    private func pageContent() -> CGSize {
         switch model.page {
         case .home:
             var tiles: [CGFloat] = model.showAvatar ? [model.dayOpen ? NotchLayout.companionDayWidth : NotchLayout.companionWidth] : []
             if model.showMusic && nowPlaying.hasTrack { tiles.append(NotchLayout.musicWidth) }
             if usage.available { tiles.append(UsageTile.width(usage)) }
             if tiles.isEmpty { tiles.append(NotchLayout.timeWidth) } // the time is the last resort, when nothing else shows
-            return NotchLayout.homeContent(tiles: tiles, glance: glance, nextEvent: nextEvent != nil)
+            return NotchLayout.homeContent(tiles: tiles, nextEvent: nextEvent != nil)
         case .desk: return NotchLayout.deskContent
         case .calendar: return agenda.showCalendar ? NotchLayout.calendarContent(weeks: Agenda.weeks(model.calendarMonth)) : NotchLayout.filesContent
         case .reminders: return NotchLayout.remindersContent
@@ -648,12 +649,11 @@ struct NotchView: View {
     var body: some View {
         let closed = model.hover.closed
         let wing = NotchSize.wing(content: max(leftWidth, rightWidth)) // fitted to what the closed Notch shows
-        let glance = !system.bluetooth.isEmpty || system.micInUse || system.cameraInUse
         let request = claude.requests.first
         let finished = request == nil ? claude.finished : nil
         let stripOnly = model.peek && (request != nil || finished != nil)
         let stripHeight = request?.stripHeight(open: claude.open) ?? finished.map { _ in NotchLayout.claudeFinished }
-        let content = stripHeight.map { NotchLayout.withStrip(stripOnly ? nil : pageContent(glance: glance), strip: $0) } ?? pageContent(glance: glance)
+        let content = stripHeight.map { NotchLayout.withStrip(stripOnly ? nil : pageContent(), strip: $0) } ?? pageContent()
         let wanted = NotchLayout.open(content: content, closedHeight: closed.height)
         // On a hardware notch the closed shape overlaps the real one a little, so no edge of it shows around ours.
         let bleed = model.cutout > 0 ? NotchLayout.cutoutBleed : 0
@@ -708,12 +708,11 @@ struct NotchView: View {
                     } else if model.page == .home {
                         VStack(spacing: 10) {
                             HStack(spacing: NotchLayout.gap) {
-                                if model.showAvatar { CompanionTile(model: model, focus: focus, tasks: tasks, nowPlaying: nowPlaying) }
+                                if model.showAvatar { CompanionTile(model: model, focus: focus, tasks: tasks, nowPlaying: nowPlaying, system: system) }
                                 if model.showMusic && nowPlaying.hasTrack { NowPlayingCard(nowPlaying: nowPlaying) } // playing or paused; gone when stopped or stale
                                 if usage.available { UsageTile(usage: usage, room: .infinity) } // the Notch is as wide as its tiles
                                 if !model.showAvatar && !(model.showMusic && nowPlaying.hasTrack) && !usage.available { TimeTile() }
                             }
-                            if glance { GlanceRow(system: system) }
                             if let nextEvent { NextEventLine(event: nextEvent) }
                         }
                         .task(id: usage.available) { if usage.available { await usage.poll() } } // looks again every 30 s while Home is open
@@ -737,10 +736,9 @@ struct NotchView: View {
                 .transition(pageTransition)
             } else {
                 // The Electron Notch's closed bar: what is happening on the left, inset from the edge (8pt on a hardware notch,
-                // 20pt on the pill); the time and the mic and camera dots on the right. Nothing is drawn inside the cutout.
+                // 20pt on the pill); the time on the right. Nothing is drawn inside the cutout.
                 let left: ClosedLeft = system.headphones != nil ? .headphones : focus.phase == .running ? .focus : model.closedCompanion ? .companion : model.closedClock ? .clock : .none
                 let rightClock = model.closedClock && left != .clock && left != .headphones && !nowPlaying.hasTrack // the clock moves over when the left has something else
-                let dots = system.micInUse || system.cameraInUse
                 ZStack {
                     Group {
                         switch left {
@@ -760,7 +758,6 @@ struct NotchView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: 8) {
                         if rightClock { ClosedClock() }
-                        if dots { PrivacyDots(system: system) }
                         if nowPlaying.hasTrack { PulsingArt(image: nowPlaying.art, tint: nowPlaying.tint, playing: nowPlaying.isPlaying) } // the art on the right, swelling and easing back while playing, still when paused
                     }
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { rightWidth = $0 }

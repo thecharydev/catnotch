@@ -129,6 +129,10 @@ extension StoreData {
         get { settings["showMusic"]?.bool != false }
         set { settings["showMusic"] = .bool(newValue) }
     }
+    public var showBluetooth: Bool {
+        get { settings["showBluetooth"]?.bool != false }
+        set { settings["showBluetooth"] = .bool(newValue) }
+    }
     public var showDesk: Bool {
         get { settings["showDesk"]?.bool != false }
         set { settings["showDesk"] = .bool(newValue) }

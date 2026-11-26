@@ -39,7 +39,6 @@ public enum NotchLayout {
     public static let remindersContent = CGSize(width: 392 - 2 * side, height: tile)
     public static let filesContent = CGSize(width: 640 - 2 * side, height: tile)
     /// The strip of Bluetooth, mic and camera chips under the Home tiles, and the gap above it.
-    public static let glanceRow: CGFloat = 30
 
     /// The Calendar's content height: the month grid is 40pt of heading and 22pt a week (`calendarHeight`).
     public static func calendarContent(weeks: Int) -> CGSize {
@@ -48,12 +47,11 @@ public enum NotchLayout {
 
     /// Home: as wide as its tiles side by side (never under 320), as tall as a tile and, when it has chips, the glance row
     /// and, when an event is next today, its line.
-    public static func homeContent(tiles: [CGFloat], glance: Bool, nextEvent: Bool = false) -> CGSize {
+    public static func homeContent(tiles: [CGFloat], nextEvent: Bool = false) -> CGSize {
         let gaps = CGFloat(max(0, tiles.count - 1))
         let row: CGFloat = tiles.reduce(0, +) + gap * gaps
         let width: CGFloat = max(homeMinWidth - 2 * side, row)
         var height: CGFloat = tile
-        if glance { height += gap + glanceRow }
         if nextEvent { height += nextEventLine }
         return CGSize(width: width, height: height)
     }

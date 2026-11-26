@@ -121,6 +121,7 @@ private struct SettingsView: View {
     @State private var reacts: Bool
     @State private var ambient: Bool
     @State private var showAvatar: Bool
+    @State private var showBluetooth: Bool
     @State private var showDesk: Bool
     @State private var showReminders: Bool
     @State private var showFiles: Bool
@@ -149,6 +150,7 @@ private struct SettingsView: View {
         _reacts = State(initialValue: store.data.companionReact)
         _ambient = State(initialValue: store.data.ambientVideo)
         _showAvatar = State(initialValue: store.data.showAvatar)
+        _showBluetooth = State(initialValue: store.data.showBluetooth)
         _showDesk = State(initialValue: store.data.showDesk)
         _showReminders = State(initialValue: store.data.showReminders)
         _showFiles = State(initialValue: store.data.showFiles)
@@ -252,7 +254,7 @@ private struct SettingsView: View {
     @ViewBuilder private var closedSection: some View {
         Section("Closed Notch") {
             Toggle("Show the time", isOn: Binding(get: { closedClock }, set: { on in closedClock = on; store.update { $0.closedClock = on } }))
-            Text("Music, headphones, a focus session and the mic or camera dots still take their place when they happen.").font(.caption).foregroundStyle(.secondary)
+            Text("Music, headphones and a focus session still take their place when they happen.").font(.caption).foregroundStyle(.secondary)
         }
     }
 
@@ -278,6 +280,7 @@ private struct SettingsView: View {
     @ViewBuilder private var companionSection: some View {
         Section("Companion") {
             sectionToggle("Show on Home", $showAvatar) { $0.showAvatar = $1 }
+            sectionToggle("Bluetooth battery in the clock", $showBluetooth) { $0.showBluetooth = $1 }
             LabeledContent("Character") {
                 HStack(spacing: 2) {
                     ForEach(CompanionCharacter.allCases.filter { $0 != .photo }, id: \.self) { character in
@@ -335,7 +338,7 @@ private struct SettingsView: View {
             Toggle("Show usage on Home", isOn: Binding(get: { usage.masterOn }, set: { usage.setAvailable($0) }))
             if usage.masterOn {
                 ForEach(LimitsProvider.allCases, id: \.self) { provider in
-                    Toggle(provider.name, isOn: Binding(get: { usage.isEnabled(provider) }, set: { usage.setEnabled(provider, $0) }))
+                    Toggle(provider.name, isOn: Binding(get: { usage.shows(provider) }, set: { usage.setShows(provider, $0) }))
                 }
             }
             SourceNote(source: .aiUsage)

@@ -166,6 +166,7 @@ final class NotchPanel {
         if model.closedCompanion != data.closedCompanion { model.closedCompanion = data.closedCompanion }
         if model.showAvatar != data.showAvatar { model.showAvatar = data.showAvatar }
         if model.showMusic != data.showMusic { model.showMusic = data.showMusic }
+        if model.showBluetooth != data.showBluetooth { model.showBluetooth = data.showBluetooth }
         if model.pagesOff != data.pagesOff {
             model.pagesOff = data.pagesOff
             if data.pagesOff.contains(model.page) { model.page = .home } // the page it was on is gone

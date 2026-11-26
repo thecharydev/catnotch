@@ -279,7 +279,7 @@ struct UsageTile: View {
                         HStack(spacing: 0) {
                             switch provider.reading {
                             case .limits(let limits):
-                                ForEach(limits, id: \.label) { Gauge(name: provider.name, limit: $0, note: provider.note(for: $0, now: clock.date), scale: scale) }
+                                ForEach(limits, id: \.label) { Gauge(name: provider.name, limit: $0, note: nil, scale: scale) }
                             case .failed(let error): RetryGauge(name: provider.name, error: error, usage: usage)
                             }
                         }

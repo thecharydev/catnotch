@@ -112,6 +112,7 @@ struct CompanionTile: View {
     var focus: FocusModel
     var tasks: TaskModel
     var nowPlaying: NowPlayingModel
+    var system: SystemModel
     @State private var driver = CompanionDriver()
     @State private var pulse = 0
     @State private var photo: NSImage?
@@ -128,7 +129,7 @@ struct CompanionTile: View {
                 }
             }
             .frame(width: 96).frame(maxHeight: .infinity)
-            ClockMode(expanded: model.dayOpen)
+            ClockMode(expanded: model.dayOpen, device: model.showBluetooth ? system.bluetooth.first { $0.battery != nil } : nil)
         }
         .homeTile(width: model.dayOpen ? NotchLayout.companionDayWidth : NotchLayout.companionWidth, tint: accent) // the glow behind the companion, in its colour
         .contentShape(RoundedRectangle(cornerRadius: 18))
@@ -138,6 +139,7 @@ struct CompanionTile: View {
         .onChange(of: focus.phase) { cheer() }
         .onChange(of: tasks.done.count) { old, new in if new > old { cheer() } }
         .onChange(of: nowPlaying.current?.title) { _, title in if title != nil { cheer() } }
+        .task { system.refreshBluetooth() } // opening the Notch is the moment to look again; the call skips itself when it has looked recently
         .task(id: model.photo) { photo = model.character == .photo ? Self.thumbnail(model.photo) : nil }
         .onChange(of: model.character) { photo = model.character == .photo ? Self.thumbnail(model.photo) : nil }
     }
