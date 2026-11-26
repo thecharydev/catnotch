@@ -332,7 +332,12 @@ private struct SettingsView: View {
 
     @ViewBuilder private var usageSection: some View {
         Section("AI usage") {
-            Toggle("Show usage on Home", isOn: Binding(get: { usage.available }, set: { usage.setAvailable($0) }))
+            Toggle("Show usage on Home", isOn: Binding(get: { usage.masterOn }, set: { usage.setAvailable($0) }))
+            if usage.masterOn {
+                ForEach(LimitsProvider.allCases, id: \.self) { provider in
+                    Toggle(provider.name, isOn: Binding(get: { usage.isEnabled(provider) }, set: { usage.setEnabled(provider, $0) }))
+                }
+            }
             SourceNote(source: .aiUsage)
         }
         Section("Claude Code") {

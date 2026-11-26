@@ -26,14 +26,35 @@ public enum LimitsError: String, Codable, Sendable {
 public enum Reading: Equatable, Sendable {
     case limits([Limit])
     case failed(LimitsError)
+
+    var isLimits: Bool { if case .limits = self { true } else { false } }
 }
 
 public struct ProviderLimits: Equatable, Sendable, Identifiable {
     public var name: String
     public var reading: Reading
+    /// When the numbers in `reading` were taken (not when they were last asked for): a failed check keeps the old time.
+    public var at: Date?
     public var id: String { name }
 
-    public init(name: String, reading: Reading) { self.name = name; self.reading = reading }
+    /// Older than this and the numbers are shown dimmed (spec 0046).
+    static let staleAfter: TimeInterval = 120
+
+    public init(name: String, reading: Reading, at: Date? = nil) { self.name = name; self.reading = reading; self.at = at }
+
+    /// What to say under a dimmed orb: "updating…" once its own window has reset, else how old the numbers are. Nil when fine.
+    public func note(for limit: Limit, now: Date) -> String? {
+        if let reset = limit.resetsAt, reset <= now { return "updating…" }
+        guard let at, now.timeIntervalSince(at) > Self.staleAfter else { return nil }
+        let minutes = Int(now.timeIntervalSince(at) / 60)
+        return minutes < 60 ? "updated \(minutes)m ago" : "updated \(minutes / 60)h ago"
+    }
+
+    /// The soonest window reset still to come, so the poll can look again right after it.
+    public func nextReset(after now: Date) -> Date? {
+        guard case .limits(let limits) = reading else { return nil }
+        return limits.compactMap(\.resetsAt).filter { $0 > now }.min()
+    }
 }
 
 /// The sign-in a tool keeps on disk. It only ever goes to that tool's own provider.
@@ -135,6 +156,15 @@ extension StoreData {
         set { settings["showAiUsage"] = .bool(newValue) }
     }
 
+    /// Whether one usage provider is shown on Home. Unset is on.
+    public func isEnabled(_ provider: LimitsProvider) -> Bool {
+        if case .bool(let on)? = settings["aiProvider\(provider.name)"] { on } else { true }
+    }
+
+    public mutating func setEnabled(_ provider: LimitsProvider, _ on: Bool) { settings["aiProvider\(provider.name)"] = .bool(on) }
+
+    public var enabledProviders: [LimitsProvider] { LimitsProvider.allCases.filter(isEnabled) }
+
     /// The answer to "may CatNotch read the Claude Code and Codex logins?": nil is not asked yet.
     public var aiConsent: Bool? {
         get { if case .bool(let yes)? = settings["aiConsent"] { yes } else { nil } }
@@ -172,21 +202,24 @@ public actor LimitsReader {
         lastGood = cache.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([String: Entry].self, from: $0) } ?? [:]
     }
 
-    /// The readings of the tools that are signed in. `force` (a retry) skips the back-off.
-    public func read(force: Bool = false) async -> [ProviderLimits] {
-        let providers = LimitsProvider.allCases
+    /// The readings of the given tools that are signed in; the rest are not touched, their logins included.
+    /// `force` (a retry or a reload) skips the minimum gap and the back-off.
+    public func read(force: Bool = false, providers: [LimitsProvider] = LimitsProvider.allCases) async -> [ProviderLimits] {
         var results = [Reading?](repeating: nil, count: providers.count)
         await withTaskGroup(of: (Int, Reading?).self) { group in
             for (i, provider) in providers.enumerated() { group.addTask { (i, await self.read(provider, force: force)) } }
             for await (i, reading) in group { results[i] = reading }
         }
-        return zip(providers, results).compactMap { provider, reading in reading.map { ProviderLimits(name: provider.name, reading: $0) } }
+        return zip(providers, results).compactMap { provider, reading in
+            reading.map { ProviderLimits(name: provider.name, reading: $0, at: $0.isLimits ? lastGood[provider.name]?.at : nil) }
+        }
     }
 
     private func read(_ provider: LimitsProvider, force: Bool) async -> Reading? {
         let name = provider.name
         let previous = lastGood[name].map { Reading.limits($0.limits) }
-        if let entry = lastGood[name], now().timeIntervalSince(entry.at) < Self.minGap { return previous }
+        if !force, let entry = lastGood[name], now().timeIntervalSince(entry.at) < Self.minGap,
+           !entry.limits.contains(where: { ($0.resetsAt ?? .distantFuture) <= now() }) { return previous } // a window that has reset is worth asking about at once
         if !force, let until = blockedUntil[name], until > now() { return previous ?? .failed(.unavailable) }
         guard let credentials = await credentials(provider) else { return nil } // not signed in: no card
 

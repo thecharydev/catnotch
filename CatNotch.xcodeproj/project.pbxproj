@@ -34,6 +34,7 @@
 		B00000000000000000000120 /* Characters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000120 /* Characters.swift */; };
 		B00000000000000000000090 /* CompanionSim.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000090 /* CompanionSim.swift */; };
 		B00000000000000000000076 /* AiLimits.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000076 /* AiLimits.swift */; };
+		B00000000000000000000160 /* ReloadMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000160 /* ReloadMotion.swift */; };
 		B00000000000000000000066 /* Shelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000066 /* Shelf.swift */; };
 		B00000000000000000000022 /* NotchSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000022 /* NotchSize.swift */; };
 		B000000000000000000000F1 /* NotchLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F1 /* NotchLayout.swift */; };
@@ -48,6 +49,7 @@
 		B00000000000000000000073 /* GlanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000073 /* GlanceTests.swift */; };
 		B00000000000000000000092 /* CompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000092 /* CompanionTests.swift */; };
 		B00000000000000000000077 /* AiLimitsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000077 /* AiLimitsTests.swift */; };
+		B00000000000000000000161 /* ReloadMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000161 /* ReloadMotionTests.swift */; };
 		B00000000000000000000068 /* ShelfTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000068 /* ShelfTests.swift */; };
 		B00000000000000000000025 /* NotchSizeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000025 /* NotchSizeTests.swift */; };
 		B000000000000000000000F2 /* NotchLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A000000000000000000000F2 /* NotchLayoutTests.swift */; };
@@ -159,6 +161,7 @@
 		A00000000000000000000073 /* GlanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000092 /* CompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000077 /* AiLimitsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiLimitsTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000161 /* ReloadMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReloadMotionTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000068 /* ShelfTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000067 /* Screenshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Screenshots.swift; sourceTree = "<group>"; };
 		A00000000000000000000072 /* Glance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glance.swift; sourceTree = "<group>"; };
@@ -166,6 +169,7 @@
 		A00000000000000000000120 /* Characters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Characters.swift; sourceTree = "<group>"; };
 		A00000000000000000000090 /* CompanionSim.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSim.swift; sourceTree = "<group>"; };
 		A00000000000000000000076 /* AiLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiLimits.swift; sourceTree = "<group>"; };
+		A00000000000000000000160 /* ReloadMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReloadMotion.swift; sourceTree = "<group>"; };
 		A00000000000000000000066 /* Shelf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shelf.swift; sourceTree = "<group>"; };
 		A00000000000000000000065 /* CalendarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViews.swift; sourceTree = "<group>"; };
 		A00000000000000000000042 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
@@ -267,6 +271,7 @@
 				A00000000000000000000120 /* Characters.swift */,
 				A00000000000000000000090 /* CompanionSim.swift */,
 				A00000000000000000000076 /* AiLimits.swift */,
+				A00000000000000000000160 /* ReloadMotion.swift */,
 				A00000000000000000000066 /* Shelf.swift */,
 				A00000000000000000000022 /* NotchSize.swift */,
 				A000000000000000000000F1 /* NotchLayout.swift */,
@@ -294,6 +299,7 @@
 				A00000000000000000000073 /* GlanceTests.swift */,
 				A00000000000000000000092 /* CompanionTests.swift */,
 				A00000000000000000000077 /* AiLimitsTests.swift */,
+				A00000000000000000000161 /* ReloadMotionTests.swift */,
 				A00000000000000000000068 /* ShelfTests.swift */,
 				A00000000000000000000025 /* NotchSizeTests.swift */,
 				A000000000000000000000F2 /* NotchLayoutTests.swift */,
@@ -488,6 +494,7 @@
 				B00000000000000000000120 /* Characters.swift in Sources */,
 				B00000000000000000000090 /* CompanionSim.swift in Sources */,
 				B00000000000000000000076 /* AiLimits.swift in Sources */,
+				B00000000000000000000160 /* ReloadMotion.swift in Sources */,
 				B00000000000000000000066 /* Shelf.swift in Sources */,
 				B00000000000000000000022 /* NotchSize.swift in Sources */,
 				B000000000000000000000F1 /* NotchLayout.swift in Sources */,
@@ -515,6 +522,7 @@
 				B00000000000000000000073 /* GlanceTests.swift in Sources */,
 				B00000000000000000000092 /* CompanionTests.swift in Sources */,
 				B00000000000000000000077 /* AiLimitsTests.swift in Sources */,
+				B00000000000000000000161 /* ReloadMotionTests.swift in Sources */,
 				B00000000000000000000068 /* ShelfTests.swift in Sources */,
 				B00000000000000000000025 /* NotchSizeTests.swift in Sources */,
 				B000000000000000000000F2 /* NotchLayoutTests.swift in Sources */,
