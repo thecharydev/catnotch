@@ -4,12 +4,20 @@ All notable changes to CatNotch. The format follows [Keep a Changelog](https://k
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-11-26
+
 ### Added
+- The clock shows battery levels for connected Bluetooth devices that report them.
+- AI usage has a reload button, refresh status, and per-provider visibility settings.
 - MIT license, contributing guide, code of conduct, security policy, issue and pull request templates.
 - CodeQL analysis and Dependabot updates for GitHub Actions.
 
 ### Changed
+- The clock drops the microphone and camera indicators, and the notch drops its top rim line.
 - GitHub Actions are pinned to commit SHAs, and the release workflow only gets write access in its release job.
+
+### Fixed
+- The calendar hides the TODAY button when today is already selected.
 
 ## [2.0.4] - 2026-11-12
 
